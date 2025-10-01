@@ -1,0 +1,99 @@
+SPECIAL QUERY #1: 
+SELECT 
+    EXTRACT(WEEK FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')) AS order_week,
+    COUNT(*) AS total_orders
+FROM
+    orders
+WHERE
+    EXTRACT(WEEK FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')) = 42
+GROUP BY
+    EXTRACT(WEEK FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY'));
+
+
+SPECIAL QUERY #2:
+SELECT 
+    CAST(SUBSTRING(datetime_col, 9, 2) AS INTEGER) AS order_hour,
+    COUNT(*) AS total_orders,
+    SUM(total_price) AS total_sales
+FROM
+    orders
+WHERE
+    CAST(SUBSTRING(datetime_col, 9, 2) AS INTEGER) = 10
+GROUP BY
+    CAST(SUBSTRING(datetime_col, 9, 2) AS INTEGER);
+
+
+SPECIAL QUERY #3: 
+SELECT 
+    TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') AS order_date,
+    SUM(total_price) AS top_10_sales
+FROM
+    orders
+WHERE
+    EXTRACT(MONTH FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')) = 1 AND
+    EXTRACT(DAY FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')) = 7
+GROUP BY
+    TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')
+ORDER BY
+    top_10_sales DESC;
+
+
+QUERY #4:
+SELECT SUM(total_price) AS total_revenue
+FROM orders;
+
+QUERY #5:
+SELECT AVG(total_price) AS average_order_value
+FROM orders;
+
+QUERY #6:
+SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+GROUP BY customer_id
+ORDER BY order_count DESC;
+
+QUERY #7:
+SELECT order_id, customer_id, total_price, datetime_col
+FROM orders
+WHERE total_price = (SELECT MAX(total_price) FROM orders);
+
+QUERY #8:
+SELECT order_id, customer_id, total_price, datetime_col
+FROM orders
+WHERE total_price > 10
+ORDER BY total_price DESC;
+
+QUERY #9:
+SELECT order_id, datetime_col, total_price, menu_items
+FROM orders
+WHERE customer_id = 7002313919
+ORDER BY datetime_col DESC;
+
+QUERY #10:
+SELECT 
+    TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') AS order_date,
+    COUNT(*) AS orders_per_day
+FROM orders
+GROUP BY TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')
+ORDER BY order_date;
+
+QUERY #11:
+SELECT order_id, customer_id, total_price, datetime_col
+FROM orders
+WHERE TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') 
+    BETWEEN TO_DATE('10/11/2024', 'MM/DD/YYYY') AND TO_DATE('12/11/2024', 'MM/DD/YYYY')
+ORDER BY datetime_col;
+
+QUERY #12:
+SELECT 
+    customer_id,
+    COUNT(*) AS total_orders,
+    SUM(total_price) AS total_spent,
+    AVG(total_price) AS avg_order_value
+FROM orders
+GROUP BY customer_id
+ORDER BY total_spent DESC
+LIMIT 10;
+
+
+special 1, special 3, 5, 8
