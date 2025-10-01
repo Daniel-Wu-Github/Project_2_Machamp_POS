@@ -1,4 +1,12 @@
-SPECIAL QUERY #1: 
+Told to do special query 1, 3 and normal query 5 and 8.
+
+--Special Query #1: "Weekly Sales History"
+
+--pseudocode: select count of orders grouped by week
+--about: given a specific week, how many orders were placed?
+--example: "week 1 has 98765 orders"
+
+-- Version 1: Filter by specific week (replace ? with desired week number 1-53)
 SELECT 
     EXTRACT(WEEK FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')) AS order_week,
     COUNT(*) AS total_orders
@@ -10,6 +18,15 @@ GROUP BY
     EXTRACT(WEEK FROM TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY'));
 
 
+
+
+-- Special Query #2: "Realistic Sales History"
+
+-- pseudocode: select count of orders, sum of order total grouped by hour
+-- about: given a specific hour of the day, how many orders were placed and what was the total sum of the orders?
+-- example: e.g., "12pm has 12345 orders totaling $86753"
+
+-- Version 1: Filter by specific hour (replace ? with desired hour 0-23)
 SPECIAL QUERY #2:
 SELECT 
     CAST(SUBSTRING(datetime_col, 9, 2) AS INTEGER) AS order_hour,
@@ -23,6 +40,14 @@ GROUP BY
     CAST(SUBSTRING(datetime_col, 9, 2) AS INTEGER);
 
 
+
+-- Special Query #3: "Peak Sales Day"
+
+-- pseudocode: select top 10 sums of order total grouped by day in descending order by order total
+-- about: given a specific day, what was the sum of the top 10 order totals?
+-- example: "30 August has $12345 of top sales"
+
+-- Version 1: Filter by specific month and day (replace ? with month (1-12) and day (1-31))
 SPECIAL QUERY #3: 
 SELECT 
     TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') AS order_date,
@@ -38,38 +63,54 @@ ORDER BY
     top_10_sales DESC;
 
 
-QUERY #4:
+
+
+
+-- Query 4: Total Revenue
+-- Purpose: Get the total revenue from all orders
 SELECT SUM(total_price) AS total_revenue
 FROM orders;
 
-QUERY #5:
+
+-- Query 5: Average Order Value
+-- Purpose: Calculate the average amount spent per order
 SELECT AVG(total_price) AS average_order_value
 FROM orders;
 
-QUERY #6:
+-- Query 6: Order Count by Customer
+-- Purpose: Find how many orders each customer has made
 SELECT customer_id, COUNT(*) AS order_count
 FROM orders
 GROUP BY customer_id
 ORDER BY order_count DESC;
 
-QUERY #7:
+
+
+-- Query 7: Most Expensive Order
+-- Purpose: Find the highest single order value
 SELECT order_id, customer_id, total_price, datetime_col
 FROM orders
 WHERE total_price = (SELECT MAX(total_price) FROM orders);
 
-QUERY #8:
+
+-- Query 8: Orders Above Specific Amount
+-- Purpose: Find all orders above a certain dollar amount (replace ? with amount)
 SELECT order_id, customer_id, total_price, datetime_col
 FROM orders
 WHERE total_price > 10
 ORDER BY total_price DESC;
 
-QUERY #9:
+
+-- Query 9: Customer Order History
+-- Purpose: Get all orders for a specific customer (replace ? with customer_id)
 SELECT order_id, datetime_col, total_price, menu_items
 FROM orders
 WHERE customer_id = 7002313919
 ORDER BY datetime_col DESC;
 
-QUERY #10:
+
+-- Query 10: Daily Order Count
+-- Purpose: Count how many orders were placed each day
 SELECT 
     TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') AS order_date,
     COUNT(*) AS orders_per_day
@@ -77,14 +118,17 @@ FROM orders
 GROUP BY TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY')
 ORDER BY order_date;
 
-QUERY #11:
+
+-- Query 11: Orders Within Date Range
+-- Purpose: Find orders between two specific dates (replace ? with start and end dates)
 SELECT order_id, customer_id, total_price, datetime_col
 FROM orders
 WHERE TO_DATE(SUBSTRING(datetime_col, 1, 8), 'MMDDYYYY') 
     BETWEEN TO_DATE('10/11/2024', 'MM/DD/YYYY') AND TO_DATE('12/11/2024', 'MM/DD/YYYY')
 ORDER BY datetime_col;
 
-QUERY #12:
+-- Query 12: Top Spending Customers
+-- Purpose: Find the customers who have spent the most money (top 10)
 SELECT 
     customer_id,
     COUNT(*) AS total_orders,
@@ -95,5 +139,3 @@ GROUP BY customer_id
 ORDER BY total_spent DESC
 LIMIT 10;
 
-
-special 1, special 3, 5, 8
