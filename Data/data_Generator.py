@@ -1,10 +1,3 @@
-# You will create data to be stored in your database:
-# Create at least 39 weeks of sales history -- starting about one year ago and ending about today -- to store in your database that in total have approximately $750,000 in sales.
-# Include 1 peak(s) days where sales are significantly higher, which typically occur at the start of the regular semester. You might also consider peak days like game days versus away games for football or relevant special holidays.
-# Create inventory items for at least 16 different menu items. Remember that a given menu item will have multiple ingredients.
-# You will also need other items such as cups, straws, napkins, bags, and so on.
-# You are strongly encouraged to use scripting (e.g., Python) to generate `.sql` files that contain sequences of SQL commands to populate the database. You should end up with several thousand insert statements (if not tens or hundreds of thousands of them). Save all of these scripts so you can recreate anything at any time.
-
 import csv
 import random
 from datetime import datetime, timedelta
@@ -34,7 +27,75 @@ menu_items = [
 ]
 
 # ----------------------------
-# 2. Date range (39 weeks)
+# 2. Generate customer phone numbers pool
+# ----------------------------
+def generate_customer_pool():
+    """Generate a pool of customer phone numbers that can repeat"""
+    customer_phones = []
+    
+    # Generate 300-500 unique phone numbers for customer base
+    num_customers = random.randint(300, 500)
+    
+    for _ in range(num_customers):
+        # Generate 10-digit phone number (XXX-XXX-XXXX format without dashes)
+        area_code = random.randint(200, 999)  # Valid area codes
+        exchange = random.randint(200, 999)   # Valid exchange codes
+        number = random.randint(1000, 9999)   # Last 4 digits
+        phone = f"{area_code}{exchange}{number}"
+        customer_phones.append(phone)
+    
+    return customer_phones
+
+# Generate customer pool
+customer_pool = generate_customer_pool()
+
+# ----------------------------
+# 3. Helper function to generate realistic order times
+# ----------------------------
+def generate_order_time():
+    """Generate a realistic order time during business hours (9 AM - 9 PM)"""
+    # Business hours: 9:00 AM to 9:00 PM (12 hours)
+    # Weight distribution with natural variance and spikes
+    
+    # Define time periods with different probabilities
+    # Morning (9-11 AM): Moderate traffic
+    # Lunch rush (11 AM-2 PM): High traffic
+    # Afternoon lull (2-5 PM): Lower traffic
+    # Dinner rush (5-7 PM): High traffic
+    # Evening (7-9 PM): Moderate traffic
+    
+    time_weights = {
+        # Morning moderate (9-11 AM): 15% of orders
+        9: 0.08, 10: 0.07,
+        # Lunch rush (11 AM-2 PM): 45% of orders
+        11: 0.12, 12: 0.18, 13: 0.15,
+        # Afternoon lull (2-5 PM): 20% of orders
+        14: 0.05, 15: 0.08, 16: 0.07,
+        # Dinner rush (5-7 PM): 35% of orders
+        17: 0.12, 18: 0.13,
+        # Evening moderate (7-9 PM): 15% of orders
+        19: 0.08, 20: 0.07
+    }
+    
+    # Select hour based on weighted probability
+    hours = list(time_weights.keys())
+    weights = list(time_weights.values())
+    hour = random.choices(hours, weights=weights)[0]
+    
+    # Add some randomness within peak periods
+    if hour in [12, 13, 17, 18]:  # Peak hours
+        # Slightly higher chance of orders in first half of the hour during peaks
+        if random.random() < 0.6:
+            minute = random.randint(0, 29)
+        else:
+            minute = random.randint(30, 59)
+    else:
+        minute = random.randint(0, 59)
+    
+    return hour, minute
+
+# ----------------------------
+# 4. Date range (39 weeks)
 # ----------------------------
 start_date = datetime.strptime("09/26/2024", "%m/%d/%Y")
 num_days = 39 * 7  # 39 weeks ≈ 273 days
@@ -46,7 +107,7 @@ peak_day = start_date + timedelta(days=14)  # 2 weeks in
 peak_multiplier = 5  # 5x spike
 
 # ----------------------------
-# 3. Generate orders
+# 5. Generate orders
 # ----------------------------
 orders = []
 current_date = start_date
@@ -70,6 +131,10 @@ for day_idx in range(num_days):
     daily_target = base_daily_sales * multiplier * random.uniform(0.9, 1.1)
     avg_order_value = random.uniform(20, 35)
     num_orders = max(10, int(daily_target / avg_order_value))
+
+    # Generate order times for the day and sort them
+    order_times = [generate_order_time() for _ in range(num_orders)]
+    order_times.sort()
 
     for order_num in range(1, num_orders + 1):
         order_items = {}
@@ -108,9 +173,17 @@ for day_idx in range(num_days):
             order_items[chosen_item["name"]] = (0, 1, 0)
             order_total += chosen_item["price"]
 
+        # Select a random customer phone number from the pool
+        customer_id = random.choice(customer_pool)
+
+        # Create combined date-time as 12-digit number: MMDDYYYYHHMM
+        hour, minute = order_times[order_num - 1]
+        datetime_combined = f"{current_date.strftime('%m%d%Y')}{hour:02d}{minute:02d}"
+
         orders.append({
-            "Date": current_date.strftime("%m/%d/%Y"),
+            "DateTime": datetime_combined,
             "Order ID": f"{date_str}_{order_num}",
+            "Customer ID": customer_id,
             "Menu Items": str(order_items),
             "Total Price": round(order_total, 2)
         })
@@ -118,15 +191,16 @@ for day_idx in range(num_days):
     current_date += timedelta(days=1)
 
 # ----------------------------
-# 4. Write to CSV
+# 6. Write to CSV
 # ----------------------------
 with open("orders.csv", "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=["Date", "Order ID", "Menu Items", "Total Price"])
+    writer = csv.DictWriter(f, fieldnames=["DateTime", "Order ID", "Customer ID", "Menu Items", "Total Price"])
     writer.writeheader()
     writer.writerows(orders)
 
 print("✅ orders.csv generated successfully!")
 print(f"Total orders: {len(orders)}")
-
-
-
+print(f"Customer pool size: {len(customer_pool)} unique phone numbers")
+print("Sample orders with combined date-time:")
+for i in range(min(5, len(orders))):
+    print(f"  DateTime: {orders[i]['DateTime']} - Order {orders[i]['Order ID']} - Customer: {orders[i]['Customer ID']} - ${orders[i]['Total Price']}")
