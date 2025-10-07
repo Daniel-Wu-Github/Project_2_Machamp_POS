@@ -1,0 +1,29 @@
+# Ignore JavaFX runtime libraries (native DLLs / platform libs / jars) bundled locally
+UI/UI/lib/**
+
+# If you later add only specific jars manually you can whitelist, e.g.:
+# !UI/UI/lib/placeholder-keep.txt
+
+# Common Java / build artifacts
+*.class
+*.log
+hs_err_pid*
+
+# IDE / tooling
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary / caches
+bin/
+build/
+out/
+target/
+
+# Python data generation cache
+__pycache__/
+

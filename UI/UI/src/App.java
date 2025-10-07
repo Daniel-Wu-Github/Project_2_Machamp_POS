@@ -1,5 +1,6 @@
 // javac --module-path lib --add-modules javafx.controls,javafx.fxml -d out src/*.java
 // java --module-path "lib" --add-modules javafx.controls,javafx.fxml -cp out App
+// RUN COMMAND FOR WINDOWS: java "-Djava.library.path=lib" --module-path "lib" --add-modules javafx.controls,javafx.fxml -cp out App
 
 import javafx.application.Application;
 import javafx.scene.Scene;
