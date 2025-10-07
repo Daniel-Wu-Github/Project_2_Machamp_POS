@@ -7,6 +7,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.util.List;
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 /**
  * Main Application class for the Machamp POS System
@@ -63,6 +64,19 @@ public class App extends Application {
             System.err.println("Test code DB error: " + e.getMessage());
         }
 
+        // sample reports
+        String reportSummary = null;
+        try {
+            Reports reports = new Reports();
+            reports.setStartDate(LocalDate.of(2024, 9, 26));
+            reports.setEndDate(LocalDate.of(2024, 9, 30));
+            reportSummary = reports.generateSalesSummary(dbManager);
+        } catch (SQLException e) {
+            System.err.println("Report generation error: " + e.getMessage());
+        }
+        if (reportSummary != null) {
+            System.out.println(reportSummary);
+        }
         // Launch JavaFX application (blocking until window closed)
         launch(args);
     }
