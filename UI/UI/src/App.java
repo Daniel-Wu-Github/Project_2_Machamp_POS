@@ -3,8 +3,12 @@
 // RUN COMMAND FOR WINDOWS: java "-Djava.library.path=lib" --module-path "lib" --add-modules javafx.controls,javafx.fxml -cp out App
 
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import java.io.IOException;
+import java.net.URL;
 
 /**
  * Main Application class for the Machamp POS System
@@ -16,15 +20,32 @@ public class App extends Application {
     @Override
     public void start(Stage stage) {
         this.primaryStage = stage;
-        showOrdersPage(); // Start with Orders Page
+        showOrdersPage(); // Start with Orders Page (will attempt FXML first)
         stage.setTitle("Machamp POS");
         stage.show();
     }
 
     public void showOrdersPage() {
-        OrdersPage ordersPage = new OrdersPage(this);
-        Scene scene = new Scene(ordersPage.getRoot(), 900, 600);
-        primaryStage.setScene(scene);
+        // Try loading the FXML view first (out/MainView.fxml). If loading fails, fall back
+        // to the programmatic OrdersPage so the app still works.
+        try {
+            URL fxmlUrl = getClass().getResource("/out/MainView.fxml");
+            Parent root;
+            if (fxmlUrl != null) {
+                root = FXMLLoader.load(fxmlUrl);
+            } else {
+                // Fallback: load from file system relative to working dir
+                root = FXMLLoader.load(new URL("file:out/MainView.fxml"));
+            }
+            Scene scene = new Scene(root, 900, 600);
+            primaryStage.setScene(scene);
+        } catch (IOException | RuntimeException e) {
+            // Fallback to programmatically created OrdersPage
+            OrdersPage ordersPage = new OrdersPage(this);
+            Scene scene = new Scene(ordersPage.getRoot(), 900, 600);
+            primaryStage.setScene(scene);
+            System.err.println("Unable to load FXML, using programmatic OrdersPage: " + e.getMessage());
+        }
     }
 
     public void showManagerPortal() {
