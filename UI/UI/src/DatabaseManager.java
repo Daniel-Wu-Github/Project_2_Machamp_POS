@@ -10,6 +10,7 @@ public class DatabaseManager {
     private static final String DATABASE_URL = "jdbc:sqlite:machamp_pos.db";
     private Connection connection;
 
+    
     /**
      * Constructor - initializes database connection and creates tables
      */
