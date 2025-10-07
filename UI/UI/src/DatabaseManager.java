@@ -1,6 +1,7 @@
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.BufferedReader;
 
 /**
  * Database Manager for Machamp POS System using SQLite
@@ -28,6 +29,8 @@ public class DatabaseManager {
                 dropAllTables();
             }
             createTables();
+            // Import historical orders if present (only once if table empty)
+            importOrderHistoryIfEmpty("src/orders.csv");
             // insertSampleData();
             insertSampleIngredients();
             insertSampleDrinks();
@@ -66,6 +69,17 @@ public class DatabaseManager {
                 size TEXT,
                 toppings TEXT,
                 ice_level TEXT
+            )
+            """,
+            // Order history table (imported from CSV)
+            """
+            CREATE TABLE IF NOT EXISTS orderhistory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_datetime TEXT NOT NULL,
+                order_id TEXT NOT NULL UNIQUE,
+                customer_id TEXT NOT NULL,
+                menu_items TEXT NOT NULL, -- stored as normalized JSON-like string
+                total_price DECIMAL(10,2) NOT NULL
             )
             """,
             
@@ -111,6 +125,109 @@ public class DatabaseManager {
         }
         
         System.out.println("Database tables created successfully!");
+    }
+
+    // -------- Order History Import --------
+    private void importOrderHistoryIfEmpty(String csvPath) {
+        try {
+            if (!isTableEmpty("orderhistory")) return;
+        } catch (SQLException e) {
+            System.err.println("Could not check orderhistory table: " + e.getMessage());
+            return;
+        }
+        try {
+            importOrderHistoryFromCSV(csvPath);
+        } catch (Exception e) {
+            System.err.println("Order history import failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Imports orders from a CSV file with headers:
+     * DateTime,Order ID,Customer ID,Menu Items,Total Price
+     * Menu Items column contains a Python dict-like string: {'Drink': (a,b,c), ...}
+     * We normalize it to a JSON-like string: {"Drink": [a,b,c], ...}
+     */
+    public void importOrderHistoryFromCSV(String path) throws Exception {
+        java.nio.file.Path p = java.nio.file.Paths.get(path);
+        if (!java.nio.file.Files.exists(p)) {
+            System.err.println("Order CSV not found at " + path);
+            return;
+        }
+        long start = System.currentTimeMillis();
+        int imported = 0;
+        try (BufferedReader br = java.nio.file.Files.newBufferedReader(p);
+             PreparedStatement ps = connection.prepareStatement(
+                     "INSERT OR IGNORE INTO orderhistory (order_datetime, order_id, customer_id, menu_items, total_price) VALUES (?,?,?,?,?)")) {
+            connection.setAutoCommit(false);
+            String header = br.readLine(); // skip header
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.isBlank()) continue;
+                ParsedOrder po = parseOrderLine(line);
+                if (po == null) continue; // skip malformed
+                ps.setString(1, po.dateTime);
+                ps.setString(2, po.orderId);
+                ps.setString(3, po.customerId);
+                ps.setString(4, po.menuItemsJson);
+                ps.setBigDecimal(5, new java.math.BigDecimal(po.totalPrice));
+                ps.addBatch();
+                imported++;
+                if (imported % 500 == 0) ps.executeBatch();
+            }
+            ps.executeBatch();
+            connection.commit();
+            connection.setAutoCommit(true);
+        } catch (Exception e) {
+            try { connection.rollback(); } catch (SQLException ignore) {}
+            throw e;
+        }
+        System.out.println("Imported " + imported + " order history rows in " + (System.currentTimeMillis()-start) + "ms");
+    }
+
+    /**
+     * Internal helper to hold parsed order line.
+     */
+    private static class ParsedOrder {
+        String dateTime; String orderId; String customerId; String menuItemsJson; String totalPrice;
+    }
+
+    /**
+     * Parses a single CSV line. Avoids heavy CSV libs; relies on fixed column count and quoting on menu_items.
+     */
+    private ParsedOrder parseOrderLine(String line) {
+        try {
+            // Find first three commas
+            int c1 = line.indexOf(',');
+            int c2 = line.indexOf(',', c1+1);
+            int c3 = line.indexOf(',', c2+1);
+            if (c1<0||c2<0||c3<0) return null;
+            // Last comma (before total price)
+            int lastComma = line.lastIndexOf(',');
+            if (lastComma <= c3) return null;
+            String dateTime = line.substring(0,c1).trim();
+            String orderId = line.substring(c1+1,c2).trim();
+            String customerId = line.substring(c2+1,c3).trim();
+            String itemsRaw = line.substring(c3+1,lastComma).trim();
+            if (itemsRaw.startsWith("\"")) itemsRaw = itemsRaw.substring(1);
+            if (itemsRaw.endsWith("\"")) itemsRaw = itemsRaw.substring(0, itemsRaw.length()-1);
+            String total = line.substring(lastComma+1).trim();
+            // Normalize itemsRaw: change single quotes to double quotes, tuple parens to brackets
+            String jsonLike = itemsRaw
+                .replace("'", "\"")
+                .replace('(', '[')
+                .replace(')', ']');
+            ParsedOrder po = new ParsedOrder();
+            po.dateTime = dateTime;
+            po.orderId = orderId;
+            po.customerId = customerId;
+            po.menuItemsJson = jsonLike;
+            po.totalPrice = total;
+            return po;
+        } catch (Exception e) {
+            System.err.println("Failed to parse line: " + line);
+            return null;
+        }
     }
 
     /**
