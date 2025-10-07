@@ -15,12 +15,23 @@ public class DatabaseManager {
      * Constructor - initializes database connection and creates tables
      */
     public DatabaseManager() {
+        this(false);
+    }
+
+    /**
+     * @param reset If true, existing tables are dropped and recreated fresh each startup.
+     */
+    public DatabaseManager(boolean reset) {
         try {
             initializeDatabase();
+            if (reset) {
+                dropAllTables();
+            }
             createTables();
             // insertSampleData();
             insertSampleIngredients();
             insertSampleDrinks();
+            insertSampleEmployees();
         } catch (SQLException e) {
             System.err.println("Error initializing database: " + e.getMessage());
             e.printStackTrace();
@@ -32,6 +43,10 @@ public class DatabaseManager {
      */
     private void initializeDatabase() throws SQLException {
         connection = DriverManager.getConnection(DATABASE_URL);
+        // Enforce foreign keys for future relational tables
+        try (Statement fk = connection.createStatement()) {
+            fk.execute("PRAGMA foreign_keys = ON");
+        }
         System.out.println("Connected to SQLite database successfully!");
     }
 
@@ -73,6 +88,18 @@ public class DatabaseManager {
                 email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+            """,
+            // Employees table
+            """
+            CREATE TABLE IF NOT EXISTS employees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT NOT NULL,
+                last_name  TEXT NOT NULL,
+                email      TEXT NOT NULL UNIQUE,
+                role       TEXT NOT NULL CHECK(role IN ('CASHIER','MANAGER')),
+                active     INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
             """
         };
 
@@ -83,6 +110,87 @@ public class DatabaseManager {
         }
         
         System.out.println("Database tables created successfully!");
+    }
+
+    /**
+     * Drops all known tables (order chosen to avoid FK issues if added later).
+     */
+    private void dropAllTables() throws SQLException {
+        String[] tables = {"employees", "drinks", "ingredients", "customers"};
+        try (Statement st = connection.createStatement()) {
+            for (String t : tables) {
+                st.executeUpdate("DROP TABLE IF EXISTS " + t);
+            }
+        }
+        System.out.println("All tables dropped (reset mode).");
+    }
+
+    // ---------- Employee helpers ----------
+    private void insertSampleEmployees() throws SQLException {
+        if (isTableEmpty("employees")) {
+            String sql = """
+                INSERT INTO employees (first_name,last_name,email,role,active) VALUES
+                ('Alice','Nguyen','alice@example.com','CASHIER',1),
+                ('Bob','Smith','bob@example.com','MANAGER',1)
+            """;
+            try (Statement st = connection.createStatement()) {
+                st.execute(sql);
+                System.out.println("Sample employees inserted!");
+            }
+        }
+    }
+
+    private boolean isTableEmpty(String table) throws SQLException {
+        String q = "SELECT COUNT(*) FROM " + table;
+        try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(q)) {
+            return rs.next() && rs.getInt(1) == 0;
+        }
+    }
+
+    public int addEmployee(String firstName, String lastName, String email, String role) throws SQLException {
+        String sql = "INSERT INTO employees (first_name,last_name,email,role,active) VALUES (?,?,?,?,1)";
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, firstName);
+            ps.setString(2, lastName);
+            ps.setString(3, email);
+            ps.setString(4, role);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return -1;
+    }
+
+    public List<String> listEmployees() throws SQLException {
+        List<String> list = new ArrayList<>();
+        String sql = "SELECT id, first_name, last_name, email, role, active FROM employees ORDER BY id";
+        try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(String.format("%d | %s %s | %s | %s | %s",
+                        rs.getInt("id"), rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("email"), rs.getString("role"), rs.getInt("active") == 1 ? "ACTIVE" : "INACTIVE"));
+            }
+        }
+        return list;
+    }
+
+    public boolean updateEmployeeRole(int id, String newRole) throws SQLException {
+        String sql = "UPDATE employees SET role=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, newRole);
+            ps.setInt(2, id);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    public boolean setEmployeeActive(int id, boolean active) throws SQLException {
+        String sql = "UPDATE employees SET active=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, active ? 1 : 0);
+            ps.setInt(2, id);
+            return ps.executeUpdate() == 1;
+        }
     }
 
     /**
@@ -114,29 +222,29 @@ public class DatabaseManager {
      * Insert sample ingredients
      */
     private void insertSampleIngredients() throws SQLException {
+        if (!isTableEmpty("ingredients")) return;
         String insertIngredients = """
-            INSERT INTO ingredients (id, name, cost, quantity) VALUES
-            (1, 'Water', 0.001, 50),
-            (2, 'Milk', 0.008, 50),
-            (3, 'Sugar', 0.002, 50),
-            (4, 'Tea', 0.15, 50),
-            (5, 'Black Tea', 0.18, 50),
-            (6, 'Oolong Tea', 0.25, 50),
-            (7, 'Green Tea', 0.20, 50),
-            (8, 'Coffee', 0.12, 50),
-            (9, 'Cream', 0.015, 50),
-            (10, 'Coconut', 0.10, 50),
-            (11, 'Ube Powder', 0.35, 50),
-            (12, 'Protein Powder', 0.40, 50),
-            (13, 'Winter Melon', 0.08, 50),
-            (14, 'Passion Fruit', 0.12, 50),
-            (15, 'Mango', 0.09, 50),
-            (16, 'Strawberry Lemonade', 0.07, 50),
-            (17, 'Strawberry', 0.08, 50),
-            (18, 'Peach', 0.09, 50),
-            (19, 'Matcha', 0.45, 50)
+            INSERT INTO ingredients (name, cost, quantity) VALUES
+            ('Sparkling Water', 0.001, 50),
+            ('Milk', 0.008, 50),
+            ('Sugar', 0.002, 50),
+            ('Tea', 0.15, 50),
+            ('Black Tea', 0.18, 50),
+            ('Oolong Tea', 0.25, 50),
+            ('Green Tea', 0.20, 50),
+            ('Coffee', 0.12, 50),
+            ('Cream', 0.015, 50),
+            ('Coconut', 0.10, 50),
+            ('Ube Powder', 0.35, 50),
+            ('Protein Powder', 0.40, 50),
+            ('Winter Melon', 0.08, 50),
+            ('Passion Fruit', 0.12, 50),
+            ('Mango', 0.09, 50),
+            ('Strawberry Lemonade', 0.07, 50),
+            ('Strawberry', 0.08, 50),
+            ('Peach', 0.09, 50),
+            ('Matcha', 0.45, 50)
         """;
-        
         try (Statement insertStmt = connection.createStatement()) {
             insertStmt.execute(insertIngredients);
             System.out.println("Sample ingredients inserted!");
@@ -148,17 +256,40 @@ public class DatabaseManager {
      * Insert sample drinks with ingredients
      */
     private void insertSampleDrinks() throws SQLException {
-        // Insert drinks
+        if (!isTableEmpty("drinks")) return;
         String insertDrinks = """
             INSERT INTO drinks (name, base_price, category, description) VALUES
             ('Vanilla Latte', 4.50, 'Coffee', 'Classic latte with vanilla syrup'),
+            ('Iced Matcha Latte', 5.25, 'Tea', 'Refreshing matcha with milk and light sweetness'),
+            ('Mango Fruit Tea', 4.95, 'Tea', 'Fruity mango tea with real mango pieces'),
+            ('Strawberry Lemonade Refresher', 4.25, 'Refresher', 'Strawberry lemonade with a bright flavor')
         """;
-        
         try (Statement insertStmt = connection.createStatement()) {
             insertStmt.execute(insertDrinks);
             System.out.println("Sample drinks inserted!");
         }
         
+    }
+
+    // Optional: recreate only the employees table if schema adjustments are needed without full reset
+    public void recreateEmployeesTable() throws SQLException {
+        try (Statement st = connection.createStatement()) {
+            st.executeUpdate("DROP TABLE IF EXISTS employees");
+        }
+        try (Statement st = connection.createStatement()) {
+            st.execute("""
+                CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    first_name TEXT NOT NULL,
+                    last_name  TEXT NOT NULL,
+                    email      TEXT NOT NULL UNIQUE,
+                    role       TEXT NOT NULL CHECK(role IN ('CASHIER','MANAGER')),
+                    active     INTEGER NOT NULL DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """);
+        }
+        System.out.println("Employees table recreated.");
     }
     //moved locations
     //public List<Drink> getAllDrinks() {

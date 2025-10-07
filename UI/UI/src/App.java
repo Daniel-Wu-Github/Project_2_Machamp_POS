@@ -41,5 +41,7 @@ public class App extends Application {
 
     public static void main(String[] args) {
         launch(args);
+        // Initialize database manager
+        DatabaseManager dbManager = new DatabaseManager(true); // Reset DB on each run for testing
     }
 }

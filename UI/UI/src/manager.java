@@ -1,5 +1,3 @@
-package backend;
-
 import java.util.List;
 import java.util.Map;
 
@@ -8,9 +6,9 @@ import java.util.Map;
  * Actual DB operations should be delegated to service/repository layers. These methods are placeholders
  * that define intended interactions.
  */
-public class Manager extends Employee {
+public class manager extends Employee {
 
-    public Manager(int id, String firstName, String lastName, String email) {
+    public manager(int id, String firstName, String lastName, String email) {
         super(id, firstName, lastName, email, EmployeeRole.MANAGER);
     }
 
