@@ -160,7 +160,7 @@ public class DatabaseManager {
         }
         
     }
-
+    //moved locations
     //public List<Drink> getAllDrinks() {
         // TODO: Implement database query to fetch drinks
         //List<Drink> drinks = new ArrayList<>();
