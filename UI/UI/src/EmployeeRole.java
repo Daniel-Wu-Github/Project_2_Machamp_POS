@@ -1,5 +1,3 @@
-package backend;
-
 /**
  * Enumeration of employee roles within the POS system.
  */
