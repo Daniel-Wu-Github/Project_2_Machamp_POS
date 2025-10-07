@@ -5,6 +5,8 @@
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import java.util.List;
+import java.sql.SQLException;
 
 /**
  * Main Application class for the Machamp POS System
@@ -40,8 +42,28 @@ public class App extends Application {
     }
 
     public static void main(String[] args) {
+        // Initialize database manager BEFORE launching UI so test output appears immediately
+        DatabaseManager dbManager = new DatabaseManager(true); // true => reset for clean test
+
+        // TESTING CODE ---------------------------------------------------------------------
+        try {
+            System.out.println("--- Ingredients ---");
+            for (String ingredient : dbManager.listIngredients()) {
+                System.out.println(ingredient);
+            }
+
+            int newDrinkId = dbManager.addDrink("Test Drink", 4.99, "{Milk, Sugar, Tea}");
+            System.out.println("Added new drink with ID: " + newDrinkId);
+
+            System.out.println("--- Drinks ---");
+            for (String drink : dbManager.listDrinks()) {
+                System.out.println(drink);
+            }
+        } catch (SQLException e) {
+            System.err.println("Test code DB error: " + e.getMessage());
+        }
+
+        // Launch JavaFX application (blocking until window closed)
         launch(args);
-        // Initialize database manager
-        DatabaseManager dbManager = new DatabaseManager(true); // Reset DB on each run for testing
     }
 }

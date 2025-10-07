@@ -1,7 +1,7 @@
+import java.io.BufferedReader;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.BufferedReader;
 
 /**
  * Database Manager for Machamp POS System using SQLite
@@ -311,6 +311,53 @@ public class DatabaseManager {
         }
     }
 
+    /** Retrieve a single employee record */
+    public String getEmployee(int id) throws SQLException {
+        String sql = "SELECT id, first_name, last_name, email, role, active FROM employees WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return String.format("%d | %s %s | %s | %s | %s", rs.getInt(1), rs.getString(2), rs.getString(3),
+                            rs.getString(4), rs.getString(5), rs.getInt(6)==1?"ACTIVE":"INACTIVE");
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Update employee basic fields (except id & created_at). Null parameters keep existing values. */
+    public boolean updateEmployee(int id, String firstName, String lastName, String email, String role, Boolean active) throws SQLException {
+        // Build dynamic update based on provided non-null values
+        StringBuilder sb = new StringBuilder("UPDATE employees SET ");
+        List<Object> params = new ArrayList<>();
+        if (firstName != null) { sb.append("first_name=?,"); params.add(firstName); }
+        if (lastName != null)  { sb.append("last_name=?,");  params.add(lastName); }
+        if (email != null)     { sb.append("email=?,");      params.add(email); }
+        if (role != null)      { sb.append("role=?,");       params.add(role); }
+        if (active != null)    { sb.append("active=?,");     params.add(active?1:0); }
+        if (params.isEmpty()) return false; // nothing to update
+        sb.setLength(sb.length()-1); // remove trailing comma
+        sb.append(" WHERE id=?");
+        params.add(id);
+        try (PreparedStatement ps = connection.prepareStatement(sb.toString())) {
+            for (int i=0;i<params.size();i++) ps.setObject(i+1, params.get(i));
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** List only active employees */
+    public List<String> listActiveEmployees() throws SQLException {
+        List<String> list = new ArrayList<>();
+        String sql = "SELECT id, first_name, last_name, email, role FROM employees WHERE active=1 ORDER BY id";
+        try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(String.format("%d | %s %s | %s | %s", rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5)));
+            }
+        }
+        return list;
+    }
+
     /**
      * Insert sample data if tables are empty
      */
@@ -448,5 +495,127 @@ public class DatabaseManager {
      */
     public Connection getConnection() {
         return connection;
+    }
+
+    // ================== DRINK (MENU) MANAGEMENT ==================
+    /** Returns list of drinks with id, name, price */
+    public List<String> listDrinks() throws SQLException {
+        List<String> drinks = new ArrayList<>();
+        String sql = "SELECT id, name, base_price FROM drinks ORDER BY id";
+        try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                drinks.add(String.format("%d | %s | $%.2f", rs.getInt(1), rs.getString(2), rs.getDouble(3)));
+            }
+        }
+        return drinks;
+    }
+
+    /** Inserts a new drink (ingredients and customization columns optional) */
+    public int addDrink(String name, double basePrice, String ingredients) throws SQLException {
+        String sql = "INSERT INTO drinks (name, base_price, ingredients) VALUES (?,?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, name);
+            ps.setDouble(2, basePrice);
+            ps.setString(3, ingredients);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) { if (rs.next()) return rs.getInt(1); }
+        }
+        return -1;
+    }
+
+    /** Update only base price for a drink */
+    public boolean updateDrinkPrice(int drinkId, double newPrice) throws SQLException {
+        String sql = "UPDATE drinks SET base_price=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newPrice);
+            ps.setInt(2, drinkId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Generic update of name and ingredients by id */
+    public boolean updateDrink(int drinkId, String newName, String newIngredients) throws SQLException {
+        String sql = "UPDATE drinks SET name=?, ingredients=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, newName);
+            ps.setString(2, newIngredients);
+            ps.setInt(3, drinkId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Delete drink (hard delete) */
+    public boolean deleteDrink(int drinkId) throws SQLException {
+        String sql = "DELETE FROM drinks WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, drinkId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    // ================== INGREDIENT (INVENTORY) MANAGEMENT ==================
+    /** List ingredients id | name | cost | quantity */
+    public List<String> listIngredients() throws SQLException {
+        List<String> list = new ArrayList<>();
+        String sql = "SELECT id,name,cost,quantity FROM ingredients ORDER BY id";
+        try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(String.format("%d | %s | cost=%.3f | qty=%.3f",
+                        rs.getInt(1), rs.getString(2), rs.getDouble(3), rs.getDouble(4)));
+            }
+        }
+        return list;
+    }
+
+    /** Add a new ingredient */
+    public int addIngredient(String name, double cost, double quantity) throws SQLException {
+        String sql = "INSERT INTO ingredients (name,cost,quantity) VALUES (?,?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, name);
+            ps.setDouble(2, cost);
+            ps.setDouble(3, quantity);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) { if (rs.next()) return rs.getInt(1); }
+        }
+        return -1;
+    }
+
+    /** Set absolute quantity */
+    public boolean updateIngredientQuantity(int ingredientId, double newQuantity) throws SQLException {
+        String sql = "UPDATE ingredients SET quantity=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newQuantity);
+            ps.setInt(2, ingredientId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Increment/decrement quantity by delta (can be negative) */
+    public boolean adjustIngredientQuantity(int ingredientId, double delta) throws SQLException {
+        String sql = "UPDATE ingredients SET quantity = quantity + ? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, delta);
+            ps.setInt(2, ingredientId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Update ingredient cost */
+    public boolean updateIngredientCost(int ingredientId, double newCost) throws SQLException {
+        String sql = "UPDATE ingredients SET cost=? WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newCost);
+            ps.setInt(2, ingredientId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Delete ingredient */
+    public boolean deleteIngredient(int ingredientId) throws SQLException {
+        String sql = "DELETE FROM ingredients WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, ingredientId);
+            return ps.executeUpdate() == 1;
+        }
     }
 }
