@@ -135,14 +135,14 @@ public class MainController implements Initializable {
      * Add product to the system (placeholder for database integration)
      */
     private void addProduct(String name, double price) {
-        // TODO: Add database integration here
-        // For now, just print to console
-        System.out.println("Adding product: " + name + " with price: $" + String.format("%.2f", price));
-        
-        // Here you would typically:
-        // 1. Connect to your database
-        // 2. Insert the product into your products table
-        // 3. Handle any database exceptions
-        // 4. Update any product lists or displays
+        // Attempt to insert into database
+        boolean ok = DB.insertMenuItem(name, price);
+        if (ok) {
+            System.out.println("Added product to DB: " + name + " ($" + String.format("%.2f", price) + ")");
+        } else {
+            // Fallback behavior: still print but inform the user via status label
+            System.out.println("Failed to add product to DB. See stderr for details.");
+            updateStatus("(Local) Product '" + name + "' added (DB not configured)", "info");
+        }
     }
 }

@@ -31,21 +31,70 @@ public class CustomizationPage {
         Label drinkTitle = new Label(drinkName);
         Rectangle placeholder = new Rectangle(150, 150, Color.LIGHTGRAY);
 
-        HBox sizeBox = new HBox(10, new Button("Small"), new Button("Medium"), new Button("Large"));
-        sizeBox.setAlignment(Pos.CENTER);
+            // Size buttons (track selection)
+            Button smallBtn = new Button("Small");
+            Button medBtn = new Button("Medium");
+            Button largeBtn = new Button("Large");
+            HBox sizeBox = new HBox(10, smallBtn, medBtn, largeBtn);
+            sizeBox.setAlignment(Pos.CENTER);
 
-        HBox sugarBox = new HBox(10, new Button("No Sugar"), new Button("Half Sugar"), new Button("Normal"));
-        sugarBox.setAlignment(Pos.CENTER);
+            // Sugar buttons
+            Button noSugarBtn = new Button("No Sugar");
+            Button halfSugarBtn = new Button("Half Sugar");
+            Button normalSugarBtn = new Button("Normal");
+            HBox sugarBox = new HBox(10, noSugarBtn, halfSugarBtn, normalSugarBtn);
+            sugarBox.setAlignment(Pos.CENTER);
 
-        VBox toppingsBox = new VBox(10,
-                new Button("Add Boba"),
-                new Button("Add Lychee Jelly"),
-                new Button("Add Pudding"));
-        toppingsBox.setAlignment(Pos.CENTER);
+            // Toppings (toggleable)
+            Button bobaBtn = new Button("Add Boba");
+            Button lycheeBtn = new Button("Add Lychee Jelly");
+            Button puddingBtn = new Button("Add Pudding");
+            VBox toppingsBox = new VBox(10, bobaBtn, lycheeBtn, puddingBtn);
+            toppingsBox.setAlignment(Pos.CENTER);
 
-        Button continueBtn = new Button("Continue →");
+            Button continueBtn = new Button("Continue →");
+
+            // State variables
+            final String[] selectedSize = {"Medium"};
+            final String[] selectedSugar = {"Normal"};
+            final java.util.Set<String> selectedToppings = new java.util.HashSet<>();
+
+            // Button actions update state and visual style
+            smallBtn.setOnAction(e -> { selectedSize[0] = "Small"; });
+            medBtn.setOnAction(e -> { selectedSize[0] = "Medium"; });
+            largeBtn.setOnAction(e -> { selectedSize[0] = "Large"; });
+
+            noSugarBtn.setOnAction(e -> { selectedSugar[0] = "No Sugar"; });
+            halfSugarBtn.setOnAction(e -> { selectedSugar[0] = "Half Sugar"; });
+            normalSugarBtn.setOnAction(e -> { selectedSugar[0] = "Normal"; });
+
+            bobaBtn.setOnAction(e -> toggleTopping("Boba", bobaBtn, selectedToppings));
+            lycheeBtn.setOnAction(e -> toggleTopping("Lychee Jelly", lycheeBtn, selectedToppings));
+            puddingBtn.setOnAction(e -> toggleTopping("Pudding", puddingBtn, selectedToppings));
 
         centerBox.getChildren().addAll(drinkTitle, placeholder, sizeBox, sugarBox, toppingsBox, continueBtn);
+
+            // Continue -> submit simple order to DB or fallback
+            continueBtn.setOnAction(e -> {
+                String toppings = String.join(", ", selectedToppings);
+                // simple pricing model: base 3.50, size add: small -0.5, medium 0, large +0.75, toppings +0.5 each
+                double total = 3.50;
+                switch (selectedSize[0]) {
+                    case "Small": total -= 0.50; break;
+                    case "Large": total += 0.75; break;
+                    default: break;
+                }
+                total += selectedToppings.size() * 0.50;
+
+                boolean ok = DB.insertOrder(drinkName, selectedSize[0], selectedSugar[0], toppings, total);
+                if (ok) {
+                    System.out.println("Order submitted: " + drinkName + " - $" + String.format("%.2f", total));
+                } else {
+                    System.out.println("Failed to submit order to DB. Order totals to $" + String.format("%.2f", total));
+                }
+                // Return to orders page after submit
+                app.showOrdersPage();
+            });
 
         root.setLeft(sidebar);
         root.setCenter(centerBox);
@@ -53,5 +102,15 @@ public class CustomizationPage {
 
     public BorderPane getRoot() {
         return root;
+    }
+
+    private void toggleTopping(String name, Button btn, java.util.Set<String> selected) {
+        if (selected.contains(name)) {
+            selected.remove(name);
+            btn.setStyle("");
+        } else {
+            selected.add(name);
+            btn.setStyle("-fx-background-color: lightgreen;");
+        }
     }
 }
