@@ -61,10 +61,11 @@ public class DatabaseManager {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 base_price DECIMAL(10,2) NOT NULL,
-                category TEXT NOT NULL,
-                description TEXT,
-                available BOOLEAN DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ingredients TEXT NOT NULL,
+                sugar_level TEXT,
+                size TEXT,
+                toppings TEXT,
+                ice_level TEXT
             )
             """,
             
@@ -258,11 +259,24 @@ public class DatabaseManager {
     private void insertSampleDrinks() throws SQLException {
         if (!isTableEmpty("drinks")) return;
         String insertDrinks = """
-            INSERT INTO drinks (name, base_price, category, description) VALUES
-            ('Vanilla Latte', 4.50, 'Coffee', 'Classic latte with vanilla syrup'),
-            ('Iced Matcha Latte', 5.25, 'Tea', 'Refreshing matcha with milk and light sweetness'),
-            ('Mango Fruit Tea', 4.95, 'Tea', 'Fruity mango tea with real mango pieces'),
-            ('Strawberry Lemonade Refresher', 4.25, 'Refresher', 'Strawberry lemonade with a bright flavor')
+            INSERT INTO drinks (name, base_price, ingredients, sugar_level, size, toppings, ice_level) VALUES
+            ('Original Milk Tea', 5.25, '{Water, Milk, Sugar, Tea}', NULL, NULL, NULL, NULL),
+            ('Black Milk Tea', 5.25, '{Water, Milk, Sugar, Black Tea}', NULL, NULL, NULL, NULL),
+            ('Oolong Milk Tea', 5.25, '{Water, Milk, Sugar, Oolong Tea}', NULL, NULL, NULL, NULL),
+            ('Green Milk Tea', 5.25, '{Water, Milk, Sugar, Green Tea}', NULL, NULL, NULL, NULL),
+            ('Capuccino Milk Tea', 6.25, '{Water, Milk, Sugar, Coffee, Cream}', NULL, NULL, NULL, NULL),
+            ('Coconut Milk Tea', 7.25, '{Water, Milk, Sugar, Tea, Coconut}', NULL, NULL, NULL, NULL),
+            ('Ube Milk Tea', 7.25, '{Water, Milk, Sugar, Ube Powder}', NULL, NULL, NULL, NULL),
+            ('Protein Shake Milk Tea', 9.75, '{Water, Milk, Sugar, Tea, Protein Powder}', NULL, NULL, NULL, NULL),
+            ('Ice Blend Latte', 6.25, '{Water, Milk, Sugar, Tea, Protein Powder}', NULL, NULL, NULL, NULL),
+            ('Winter Melon Green Tea', 8.25, '{Water, Sugar, Green Tea, Winter Melon}', NULL, NULL, NULL, NULL),
+            ('Passionfruit Green Tea', 7.25, '{Water, Sugar, Passionfruit, Green Tea}', NULL, NULL, NULL, NULL),
+            ('Mango Green Tea', 3.25, '{Water, Sugar, Green Tea, Mango}', NULL, NULL, NULL, NULL),
+            ('Strawberry Lemonade Tea', 3.25, '{Water, Sugar, Green Tea, Strawberry Lemonade}', NULL, NULL, NULL, NULL),
+            ('Strawberry Matcha', 7.25, '{Water, Sugar, Green Tea, Strawberry}', NULL, NULL, NULL, NULL),
+            ('Peach Oolong Tea', 7.25, '{Water, Sugar, Oolong Tea, Peach}', NULL, NULL, NULL, NULL),
+            ('Secret Matcha', 69.25, '{Water, Matcha}', NULL, NULL, NULL, NULL),
+            ('Free Drink', 0.00, '{Water, Milk, Sugar, Tea}', NULL, NULL, NULL, NULL)
         """;
         try (Statement insertStmt = connection.createStatement()) {
             insertStmt.execute(insertDrinks);
