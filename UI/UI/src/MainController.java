@@ -3,6 +3,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.DatePicker;
 import javafx.event.ActionEvent;
@@ -79,6 +80,26 @@ public class MainController implements Initializable {
     @FXML private DatePicker startDatePicker, endDatePicker;
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
+    
+    // Management buttons
+    @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
+    @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
+    @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
+    @FXML private Button generateReportBtn;
+    
+    // Management UI components
+    @FXML private VBox managementSection;
+    @FXML private Label managementTitle;
+    @FXML private ScrollPane displayPane;
+    @FXML private TextArea displayArea;
+    @FXML private VBox formSection;
+    @FXML private TextField idField, field1, field2, field3, field4;
+    @FXML private Label field1Label, field2Label, field3Label, field4Label;
+    @FXML private HBox field4Container;
+    @FXML private HBox dateRangeContainer;
+    @FXML private DatePicker startDatePicker, endDatePicker;
+    @FXML private Button submitBtn, cancelBtn;
+    @FXML private Label statusLabel;
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
@@ -107,6 +128,9 @@ public class MainController implements Initializable {
         // Initialize database manager
         dbManager = new DatabaseManager();
         
+        // Initialize database manager
+        dbManager = new DatabaseManager();
+        
         if (statusLabel != null) {
             statusLabel.setText("System ready");
         }
@@ -125,6 +149,28 @@ public class MainController implements Initializable {
         if (backFromManagerBtn != null) {
             backFromManagerBtn.setOnAction(e -> showOrdersPage());
         }
+        
+        // Management buttons - Menu
+        if (viewMenuBtn != null) viewMenuBtn.setOnAction(e -> handleViewMenu());
+        if (addMenuItemBtn != null) addMenuItemBtn.setOnAction(e -> handleAddMenuItem());
+        if (updateMenuItemBtn != null) updateMenuItemBtn.setOnAction(e -> handleUpdateMenuItem());
+        
+        // Management buttons - Inventory
+        if (viewInventoryBtn != null) viewInventoryBtn.setOnAction(e -> handleViewInventory());
+        if (addIngredientBtn != null) addIngredientBtn.setOnAction(e -> handleAddIngredient());
+        if (updateInventoryBtn != null) updateInventoryBtn.setOnAction(e -> handleUpdateInventory());
+        
+        // Management buttons - Employees
+        if (viewEmployeesBtn != null) viewEmployeesBtn.setOnAction(e -> handleViewEmployees());
+        if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
+        if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
+        
+        // Reports button
+        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+        
+        // Form buttons
+        if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
+        if (cancelBtn != null) cancelBtn.setOnAction(e -> handleCancel());
         
         // Management buttons - Menu
         if (viewMenuBtn != null) viewMenuBtn.setOnAction(e -> handleViewMenu());
@@ -223,6 +269,7 @@ public class MainController implements Initializable {
         productNameField.requestFocus();
     }
     
+
 
     
     /**
