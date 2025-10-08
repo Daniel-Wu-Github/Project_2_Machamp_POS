@@ -4,6 +4,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.DatePicker;
 import javafx.event.ActionEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -63,6 +64,7 @@ public class MainController implements Initializable {
     @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
     @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
     @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
+    @FXML private Button generateReportBtn;
     
     // Management UI components
     @FXML private VBox managementSection;
@@ -73,6 +75,8 @@ public class MainController implements Initializable {
     @FXML private TextField idField, field1, field2, field3, field4;
     @FXML private Label field1Label, field2Label, field3Label, field4Label;
     @FXML private HBox field4Container;
+    @FXML private HBox dateRangeContainer;
+    @FXML private DatePicker startDatePicker, endDatePicker;
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
 
@@ -136,6 +140,9 @@ public class MainController implements Initializable {
         if (viewEmployeesBtn != null) viewEmployeesBtn.setOnAction(e -> handleViewEmployees());
         if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
         if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
+        
+        // Reports button
+        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -524,6 +531,40 @@ public class MainController implements Initializable {
         updateStatus("Enter ID and updates for employee.", "info");
     }
     
+    // Reports Management Method
+    private void handleGenerateReport() {
+        currentOperation = "generate_report";
+        showManagementSection("Generate Sales Report");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for date range selection
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("");
+        field2Label.setText("");
+        field3Label.setText("");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        field1.setVisible(false);
+        field1.setManaged(false);
+        field2.setVisible(false);
+        field2.setManaged(false);
+        field3.setVisible(false);
+        field3.setManaged(false);
+        
+        // Show date range container
+        dateRangeContainer.setVisible(true);
+        dateRangeContainer.setManaged(true);
+        
+        // Set default dates to today
+        java.time.LocalDate today = java.time.LocalDate.now();
+        startDatePicker.setValue(today);
+        endDatePicker.setValue(today);
+        
+        updateStatus("Select date range for sales report.", "info");
+    }
+    
     // Form handling methods
     private void handleSubmit() {
         try {
@@ -534,7 +575,8 @@ public class MainController implements Initializable {
                 case "update_inventory" -> submitUpdateInventory();
                 case "add_employee" -> submitAddEmployee();
                 case "update_employee" -> submitUpdateEmployee();
-                default -> updateStatus("Unknown operation.", "error");
+                case "generate_report" -> submitGenerateReport();
+                default -> updateStatus("Unknown operation", "error");
             }
         } catch (Exception e) {
             updateStatus("Error: " + e.getMessage(), "error");
@@ -545,6 +587,7 @@ public class MainController implements Initializable {
     private void handleCancel() {
         hideManagementSection();
         clearForm();
+        hideDateRangeContainer();
         updateStatus("", "info");
         currentOperation = "";
     }
@@ -722,6 +765,32 @@ public class MainController implements Initializable {
         }
     }
     
+    private void submitGenerateReport() throws Exception {
+        java.time.LocalDate startDate = startDatePicker.getValue();
+        java.time.LocalDate endDate = endDatePicker.getValue();
+        
+        if (startDate == null || endDate == null) {
+            updateStatus("Please select both start and end dates.", "error");
+            return;
+        }
+        
+        if (endDate.isBefore(startDate)) {
+            updateStatus("End date cannot be before start date.", "error");
+            return;
+        }
+        
+        // Generate the report with selected date range
+        Reports reports = new Reports(startDate, endDate);
+        String reportContent = reports.generateSalesSummary(dbManager);
+        
+        // Hide form and show display area with report
+        hideFormSection();
+        showDisplayPane();
+        displayArea.setText(reportContent);
+        
+        updateStatus("Sales report generated successfully for " + startDate + " to " + endDate, "success");
+    }
+    
     // UI Helper Methods
     private void showManagementSection(String title) {
         if (managementSection != null) {
@@ -776,6 +845,13 @@ public class MainController implements Initializable {
         if (field2 != null) field2.clear();
         if (field3 != null) field3.clear();
         if (field4 != null) field4.clear();
+    }
+    
+    private void hideDateRangeContainer() {
+        if (dateRangeContainer != null) {
+            dateRangeContainer.setVisible(false);
+            dateRangeContainer.setManaged(false);
+        }
     }
     
     private void updateStatus(String message, String type) {
