@@ -112,32 +112,145 @@
       <!-- MANAGER PORTAL PAGE -->
       <BorderPane fx:id="managerPane" visible="false" managed="false" prefWidth="900" prefHeight="600">
          <left>
-            <VBox spacing="20" BorderPane.alignment="CENTER">
+            <VBox spacing="15" BorderPane.alignment="CENTER">
                <children>
-                  <Label text="Manager Portal" />
+                  <Label text="Manager Portal" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
                   <Button fx:id="backFromManagerBtn" text="Back to Orders" />
+                  <Separator />
+                  
+                  <!-- Menu Management -->
+                  <Label text="Menu Management" style="-fx-font-weight: bold;" />
+                  <Button fx:id="viewMenuBtn" text="View Menu" />
+                  <Button fx:id="addMenuItemBtn" text="Add Menu Item" />
+                  <Button fx:id="updateMenuItemBtn" text="Update Menu Item" />
+                  
+                  <Separator />
+                  
+                  <!-- Inventory Management -->
+                  <Label text="Inventory Management" style="-fx-font-weight: bold;" />
+                  <Button fx:id="viewInventoryBtn" text="View Inventory" />
+                  <Button fx:id="addIngredientBtn" text="Add Ingredient" />
+                  <Button fx:id="updateInventoryBtn" text="Update Inventory" />
+                  
+                  <Separator />
+                  
+                  <!-- Employee Management -->
+                  <Label text="Employee Management" style="-fx-font-weight: bold;" />
+                  <Button fx:id="viewEmployeesBtn" text="View Employees" />
+                  <Button fx:id="addEmployeeBtn" text="Add Employee" />
+                  <Button fx:id="updateEmployeeBtn" text="Update Employee" />
+                  
+                  <Separator />
+                  
+                  <!-- Reports -->
+                  <Label text="Reports" style="-fx-font-weight: bold;" />
+                  <Button fx:id="generateReportBtn" text="Generate Sales Report" />
                </children>
                <padding><Insets left="20" top="20" right="20" bottom="20"/></padding>
             </VBox>
          </left>
          <center>
-            <VBox spacing="20" BorderPane.alignment="CENTER">
-               <children>
-                  <HBox spacing="20" alignment="CENTER">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+               <content>
+                  <VBox spacing="15" BorderPane.alignment="CENTER">
                      <children>
-                        <Label fx:id="dailyEarningsLabel" text="Daily Earnings: $1298.53" />
-                        <Label fx:id="operatingCostLabel" text="Operating Cost: $465.43" />
-                        <Label fx:id="popularItemLabel" text="Popular: Ice Blended Latte" />
+                        <HBox spacing="20" alignment="CENTER">
+                           <children>
+                              <!-- <Label fx:id="dailyEarningsLabel" text="Daily Earnings: $1298.53" />
+                              <Label fx:id="operatingCostLabel" text="Operating Cost: $465.43" />
+                              <Label fx:id="popularItemLabel" text="Popular: Ice Blended Latte" /> -->
+                           </children>
+                           <padding><Insets top="10" bottom="10" left="10" right="10"/></padding>
+                        </HBox>
+                        
+                        <!-- Management Section Container -->
+                        <VBox fx:id="managementSection" spacing="15" visible="false" managed="false">
+                           <children>
+                              <Label fx:id="managementTitle" text="Management" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                              
+                              <!-- Display Area for Lists -->
+                              <ScrollPane fx:id="displayPane" visible="false" managed="false" prefHeight="250">
+                                 <content>
+                                    <TextArea fx:id="displayArea" editable="false" wrapText="true" />
+                                 </content>
+                              </ScrollPane>
+                              
+                              <!-- Form Section for Add/Update -->
+                              <VBox fx:id="formSection" spacing="10" visible="false" managed="false">
+                                 <children>
+                                    <!-- ID Field (for updates) -->
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Label text="ID:" prefWidth="100" />
+                                          <TextField fx:id="idField" prefWidth="100" promptText="ID for update" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Field 1 -->
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Label fx:id="field1Label" text="Field 1:" prefWidth="100" />
+                                          <TextField fx:id="field1" prefWidth="250" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Field 2 -->
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Label fx:id="field2Label" text="Field 2:" prefWidth="100" />
+                                          <TextField fx:id="field2" prefWidth="250" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Field 3 -->
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Label fx:id="field3Label" text="Field 3:" prefWidth="100" />
+                                          <TextField fx:id="field3" prefWidth="250" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Field 4 (Optional) -->
+                                    <HBox fx:id="field4Container" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                                       <children>
+                                          <Label fx:id="field4Label" text="Field 4:" prefWidth="100" />
+                                          <TextField fx:id="field4" prefWidth="250" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Date Range Fields (for Reports) -->
+                                    <HBox fx:id="dateRangeContainer" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                                       <children>
+                                          <Label text="Start Date:" prefWidth="100" />
+                                          <DatePicker fx:id="startDatePicker" prefWidth="150" />
+                                          <Label text="End Date:" prefWidth="80" />
+                                          <DatePicker fx:id="endDatePicker" prefWidth="150" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- Buttons -->
+                                    <HBox spacing="10" alignment="CENTER">
+                                       <children>
+                                          <Button fx:id="submitBtn" text="Submit" />
+                                          <Button fx:id="cancelBtn" text="Cancel" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                              
+                              <Label fx:id="statusLabel" text="" />
+                           </children>
+                        </VBox>
+                        
+                        <LineChart fx:id="salesLineChart" prefHeight="200">
+                           <xAxis><CategoryAxis label="Time" /></xAxis>
+                           <yAxis><NumberAxis label="Sales" /></yAxis>
+                        </LineChart>
                      </children>
-                     <padding><Insets top="10" bottom="10" left="10" right="10"/></padding>
-                  </HBox>
-                  <LineChart fx:id="salesLineChart" prefHeight="300">
-                     <xAxis><CategoryAxis label="Time" /></xAxis>
-                     <yAxis><NumberAxis label="Sales" /></yAxis>
-                  </LineChart>
-               </children>
-               <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
-            </VBox>
+                     <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
+                  </VBox>
+               </content>
+            </ScrollPane>
          </center>
       </BorderPane>
    </children>
