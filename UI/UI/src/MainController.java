@@ -61,25 +61,6 @@ public class MainController implements Initializable {
     @FXML private Label dailyEarningsLabel, operatingCostLabel, popularItemLabel;
     @FXML private LineChart<String, Number> salesLineChart;
     
-    // Management buttons
-    @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
-    @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
-    @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
-    @FXML private Button generateReportBtn;
-    
-    // Management UI components
-    @FXML private VBox managementSection;
-    @FXML private Label managementTitle;
-    @FXML private ScrollPane displayPane;
-    @FXML private TextArea displayArea;
-    @FXML private VBox formSection;
-    @FXML private TextField idField, field1, field2, field3, field4;
-    @FXML private Label field1Label, field2Label, field3Label, field4Label;
-    @FXML private HBox field4Container;
-    @FXML private HBox dateRangeContainer;
-    @FXML private DatePicker startDatePicker, endDatePicker;
-    @FXML private Button submitBtn, cancelBtn;
-    @FXML private Label statusLabel;
     
     // Management buttons
     @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
