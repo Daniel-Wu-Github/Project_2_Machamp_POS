@@ -2,12 +2,15 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.event.ActionEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
@@ -52,22 +55,47 @@ public class MainController implements Initializable {
     @FXML private Button backFromManagerBtn;
     @FXML private Label dailyEarningsLabel, operatingCostLabel, popularItemLabel;
     @FXML private LineChart<String, Number> salesLineChart;
+    
+    // Management buttons
+    @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
+    @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
+    @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
+    
+    // Management UI components
+    @FXML private VBox managementSection;
+    @FXML private Label managementTitle;
+    @FXML private ScrollPane displayPane;
+    @FXML private TextArea displayArea;
+    @FXML private VBox formSection;
+    @FXML private TextField idField, field1, field2, field3, field4;
+    @FXML private Label field1Label, field2Label, field3Label, field4Label;
+    @FXML private HBox field4Container;
+    @FXML private Button submitBtn, cancelBtn;
+    @FXML private Label statusLabel;
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
     @FXML private TextField priceField;
     @FXML private Button addProductButton;
     @FXML private Button clearButton;
-    @FXML private Label statusLabel;
 
     // State for customization
     private String selectedDrinkName;
+    
+    // Database manager instance
+    private DatabaseManager dbManager;
+    
+    // Current management operation
+    private String currentOperation = "";
     
     /**
      * Initialize method called when the FXML is loaded
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        // Initialize database manager
+        dbManager = new DatabaseManager();
+        
         if (statusLabel != null) {
             statusLabel.setText("System ready");
         }
@@ -86,6 +114,25 @@ public class MainController implements Initializable {
         if (backFromManagerBtn != null) {
             backFromManagerBtn.setOnAction(e -> showOrdersPage());
         }
+        
+        // Management buttons - Menu
+        if (viewMenuBtn != null) viewMenuBtn.setOnAction(e -> handleViewMenu());
+        if (addMenuItemBtn != null) addMenuItemBtn.setOnAction(e -> handleAddMenuItem());
+        if (updateMenuItemBtn != null) updateMenuItemBtn.setOnAction(e -> handleUpdateMenuItem());
+        
+        // Management buttons - Inventory
+        if (viewInventoryBtn != null) viewInventoryBtn.setOnAction(e -> handleViewInventory());
+        if (addIngredientBtn != null) addIngredientBtn.setOnAction(e -> handleAddIngredient());
+        if (updateInventoryBtn != null) updateInventoryBtn.setOnAction(e -> handleUpdateInventory());
+        
+        // Management buttons - Employees
+        if (viewEmployeesBtn != null) viewEmployeesBtn.setOnAction(e -> handleViewEmployees());
+        if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
+        if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
+        
+        // Form buttons
+        if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
+        if (cancelBtn != null) cancelBtn.setOnAction(e -> handleCancel());
 
         if (drinksTabBtn != null) drinksTabBtn.setOnAction(e -> filterCategory("Drinks"));
         if (foodTabBtn != null) foodTabBtn.setOnAction(e -> filterCategory("Food"));
@@ -168,19 +215,7 @@ public class MainController implements Initializable {
         productNameField.requestFocus();
     }
     
-    /**
-     * Update the status label with different styles
-     */
-    private void updateStatus(String message, String type) {
-        if (statusLabel == null) return; // optional if form removed
-        statusLabel.setText(message);
-        switch (type.toLowerCase()) {
-            case "error" -> statusLabel.setStyle("-fx-text-fill: red;");
-            case "success" -> statusLabel.setStyle("-fx-text-fill: green;");
-            case "info" -> statusLabel.setStyle("-fx-text-fill: blue;");
-            default -> statusLabel.setStyle("-fx-text-fill: black;");
-        }
-    }
+
     
     /**
      * Set up field validation and formatting
@@ -245,5 +280,510 @@ public class MainController implements Initializable {
     private void filterCategory(String category) {
         // Placeholder: implement filtering logic when categories beyond Drinks are added
         System.out.println("Category selected: " + category);
+    }
+
+    // ================== MANAGEMENT METHODS ==================
+    
+    // Menu Management Methods
+    private void handleViewMenu() {
+        currentOperation = "view_menu";
+        showManagementSection("Menu Items");
+        hideFormSection();
+        showDisplayPane();
+        
+        try {
+            java.util.List<String> drinks = dbManager.listDrinks();
+            StringBuilder sb = new StringBuilder();
+            sb.append("Current Menu Items:\n");
+            sb.append("ID | Name | Price\n");
+            sb.append("------------------------\n");
+            
+            for (String drink : drinks) {
+                sb.append(drink).append("\n");
+            }
+            
+            if (drinks.isEmpty()) {
+                sb.append("No menu items found.");
+            }
+            
+            displayArea.setText(sb.toString());
+            updateStatus("Displaying all menu items.", "info");
+            
+        } catch (Exception e) {
+            updateStatus("Error loading menu: " + e.getMessage(), "error");
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleAddMenuItem() {
+        currentOperation = "add_menu";
+        showManagementSection("Add Menu Item");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for adding menu item
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("Name:");
+        field2Label.setText("Price:");
+        field3Label.setText("Ingredients:");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        
+        clearForm();
+        field1.setPromptText("Enter drink name");
+        field2.setPromptText("Enter price (e.g., 5.99)");
+        field3.setPromptText("Enter ingredients (e.g., {Water, Milk, Sugar, Tea})");
+        
+        updateStatus("Enter details for new menu item.", "info");
+    }
+    
+    private void handleUpdateMenuItem() {
+        currentOperation = "update_menu";
+        showManagementSection("Update Menu Item");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for updating menu item
+        idField.setVisible(true);
+        idField.setManaged(true);
+        field1Label.setText("Name:");
+        field2Label.setText("Price:");
+        field3Label.setText("Ingredients:");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        
+        clearForm();
+        idField.setPromptText("Enter menu item ID");
+        field1.setPromptText("Enter new name");
+        field2.setPromptText("Enter new price");
+        field3.setPromptText("Enter new ingredients");
+        
+        updateStatus("Enter ID and new details for menu item.", "info");
+    }
+    
+    // Inventory Management Methods
+    private void handleViewInventory() {
+        currentOperation = "view_inventory";
+        showManagementSection("Inventory");
+        hideFormSection();
+        showDisplayPane();
+        
+        try {
+            java.util.List<String> ingredients = dbManager.listIngredients();
+            StringBuilder sb = new StringBuilder();
+            sb.append("Current Inventory:\n");
+            sb.append("ID | Name | Cost | Quantity\n");
+            sb.append("----------------------------------\n");
+            
+            for (String ingredient : ingredients) {
+                sb.append(ingredient).append("\n");
+            }
+            
+            if (ingredients.isEmpty()) {
+                sb.append("No ingredients found.");
+            }
+            
+            displayArea.setText(sb.toString());
+            updateStatus("Displaying all inventory items.", "info");
+            
+        } catch (Exception e) {
+            updateStatus("Error loading inventory: " + e.getMessage(), "error");
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleAddIngredient() {
+        currentOperation = "add_ingredient";
+        showManagementSection("Add Ingredient");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for adding ingredient
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("Name:");
+        field2Label.setText("Cost:");
+        field3Label.setText("Quantity:");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        
+        clearForm();
+        field1.setPromptText("Enter ingredient name");
+        field2.setPromptText("Enter cost per unit");
+        field3.setPromptText("Enter initial quantity");
+        
+        updateStatus("Enter details for new ingredient.", "info");
+    }
+    
+    private void handleUpdateInventory() {
+        currentOperation = "update_inventory";
+        showManagementSection("Update Inventory");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for updating inventory
+        idField.setVisible(true);
+        idField.setManaged(true);
+        field1Label.setText("Cost:");
+        field2Label.setText("Quantity:");
+        field3Label.setText("Adjustment:");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        
+        clearForm();
+        idField.setPromptText("Enter ingredient ID");
+        field1.setPromptText("New cost (leave empty to keep current)");
+        field2.setPromptText("New quantity (leave empty to keep current)");
+        field3.setPromptText("Quantity adjustment (+/- amount)");
+        
+        updateStatus("Enter ID and updates for inventory item.", "info");
+    }
+    
+    // Employee Management Methods
+    private void handleViewEmployees() {
+        currentOperation = "view_employees";
+        showManagementSection("Employees");
+        hideFormSection();
+        showDisplayPane();
+        
+        try {
+            java.util.List<String> employees = dbManager.listEmployees();
+            StringBuilder sb = new StringBuilder();
+            sb.append("Current Employees:\n");
+            sb.append("ID | Name | Email | Role | Active\n");
+            sb.append("----------------------------------------\n");
+            
+            for (String employee : employees) {
+                sb.append(employee).append("\n");
+            }
+            
+            if (employees.isEmpty()) {
+                sb.append("No employees found.");
+            }
+            
+            displayArea.setText(sb.toString());
+            updateStatus("Displaying all employees.", "info");
+            
+        } catch (Exception e) {
+            updateStatus("Error loading employees: " + e.getMessage(), "error");
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleAddEmployee() {
+        currentOperation = "add_employee";
+        showManagementSection("Add Employee");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for adding employee
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("First Name:");
+        field2Label.setText("Last Name:");
+        field3Label.setText("Email:");
+        field4Label.setText("Role:");
+        field4Container.setVisible(true);
+        field4Container.setManaged(true);
+        
+        clearForm();
+        field1.setPromptText("Enter first name");
+        field2.setPromptText("Enter last name");
+        field3.setPromptText("Enter email address");
+        field4.setPromptText("Enter role (CASHIER or MANAGER)");
+        
+        updateStatus("Enter details for new employee.", "info");
+    }
+    
+    private void handleUpdateEmployee() {
+        currentOperation = "update_employee";
+        showManagementSection("Update Employee");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for updating employee
+        idField.setVisible(true);
+        idField.setManaged(true);
+        field1Label.setText("First Name:");
+        field2Label.setText("Last Name:");
+        field3Label.setText("Email:");
+        field4Label.setText("Role:");
+        field4Container.setVisible(true);
+        field4Container.setManaged(true);
+        
+        clearForm();
+        idField.setPromptText("Enter employee ID");
+        field1.setPromptText("New first name (leave empty to keep)");
+        field2.setPromptText("New last name (leave empty to keep)");
+        field3.setPromptText("New email (leave empty to keep)");
+        field4.setPromptText("New role (leave empty to keep)");
+        
+        updateStatus("Enter ID and updates for employee.", "info");
+    }
+    
+    // Form handling methods
+    private void handleSubmit() {
+        try {
+            switch (currentOperation) {
+                case "add_menu" -> submitAddMenuItem();
+                case "update_menu" -> submitUpdateMenuItem();
+                case "add_ingredient" -> submitAddIngredient();
+                case "update_inventory" -> submitUpdateInventory();
+                case "add_employee" -> submitAddEmployee();
+                case "update_employee" -> submitUpdateEmployee();
+                default -> updateStatus("Unknown operation.", "error");
+            }
+        } catch (Exception e) {
+            updateStatus("Error: " + e.getMessage(), "error");
+            e.printStackTrace();
+        }
+    }
+    
+    private void handleCancel() {
+        hideManagementSection();
+        clearForm();
+        updateStatus("", "info");
+        currentOperation = "";
+    }
+    
+    // Submit implementations
+    private void submitAddMenuItem() throws Exception {
+        String name = field1.getText().trim();
+        String priceText = field2.getText().trim();
+        String ingredients = field3.getText().trim();
+        
+        if (name.isEmpty() || priceText.isEmpty()) {
+            updateStatus("Name and price are required.", "error");
+            return;
+        }
+        
+        double price = Double.parseDouble(priceText);
+        if (ingredients.isEmpty()) ingredients = "{Water}";
+        
+        int id = dbManager.addDrink(name, price, ingredients);
+        if (id > 0) {
+            updateStatus("Menu item '" + name + "' added successfully with ID: " + id, "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to add menu item.", "error");
+        }
+    }
+    
+    private void submitUpdateMenuItem() throws Exception {
+        String idText = idField.getText().trim();
+        String name = field1.getText().trim();
+        String priceText = field2.getText().trim();
+        String ingredients = field3.getText().trim();
+        
+        if (idText.isEmpty()) {
+            updateStatus("ID is required for updates.", "error");
+            return;
+        }
+        
+        int id = Integer.parseInt(idText);
+        boolean updated = false;
+        
+        if (!name.isEmpty() && !ingredients.isEmpty()) {
+            updated = dbManager.updateDrink(id, name, ingredients);
+        }
+        
+        if (!priceText.isEmpty()) {
+            double price = Double.parseDouble(priceText);
+            updated = dbManager.updateDrinkPrice(id, price) || updated;
+        }
+        
+        if (updated) {
+            updateStatus("Menu item ID " + id + " updated successfully.", "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to update menu item.", "error");
+        }
+    }
+    
+    private void submitAddIngredient() throws Exception {
+        String name = field1.getText().trim();
+        String costText = field2.getText().trim();
+        String quantityText = field3.getText().trim();
+        
+        if (name.isEmpty() || costText.isEmpty() || quantityText.isEmpty()) {
+            updateStatus("All fields are required.", "error");
+            return;
+        }
+        
+        double cost = Double.parseDouble(costText);
+        double quantity = Double.parseDouble(quantityText);
+        
+        int id = dbManager.addIngredient(name, cost, quantity);
+        if (id > 0) {
+            updateStatus("Ingredient '" + name + "' added successfully with ID: " + id, "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to add ingredient.", "error");
+        }
+    }
+    
+    private void submitUpdateInventory() throws Exception {
+        String idText = idField.getText().trim();
+        String costText = field1.getText().trim();
+        String quantityText = field2.getText().trim();
+        String adjustmentText = field3.getText().trim();
+        
+        if (idText.isEmpty()) {
+            updateStatus("ID is required for updates.", "error");
+            return;
+        }
+        
+        int id = Integer.parseInt(idText);
+        boolean updated = false;
+        
+        if (!costText.isEmpty()) {
+            double cost = Double.parseDouble(costText);
+            updated = dbManager.updateIngredientCost(id, cost);
+        }
+        
+        if (!quantityText.isEmpty()) {
+            double quantity = Double.parseDouble(quantityText);
+            updated = dbManager.updateIngredientQuantity(id, quantity) || updated;
+        }
+        
+        if (!adjustmentText.isEmpty()) {
+            double adjustment = Double.parseDouble(adjustmentText);
+            updated = dbManager.adjustIngredientQuantity(id, adjustment) || updated;
+        }
+        
+        if (updated) {
+            updateStatus("Inventory item ID " + id + " updated successfully.", "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to update inventory item.", "error");
+        }
+    }
+    
+    private void submitAddEmployee() throws Exception {
+        String firstName = field1.getText().trim();
+        String lastName = field2.getText().trim();
+        String email = field3.getText().trim();
+        String role = field4.getText().trim().toUpperCase();
+        
+        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || role.isEmpty()) {
+            updateStatus("All fields are required.", "error");
+            return;
+        }
+        
+        if (!role.equals("CASHIER") && !role.equals("MANAGER")) {
+            updateStatus("Role must be CASHIER or MANAGER.", "error");
+            return;
+        }
+        
+        int id = dbManager.addEmployee(firstName, lastName, email, role);
+        if (id > 0) {
+            updateStatus("Employee '" + firstName + " " + lastName + "' added successfully with ID: " + id, "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to add employee.", "error");
+        }
+    }
+    
+    private void submitUpdateEmployee() throws Exception {
+        String idText = idField.getText().trim();
+        String firstName = field1.getText().trim();
+        String lastName = field2.getText().trim();
+        String email = field3.getText().trim();
+        String role = field4.getText().trim().toUpperCase();
+        
+        if (idText.isEmpty()) {
+            updateStatus("ID is required for updates.", "error");
+            return;
+        }
+        
+        int id = Integer.parseInt(idText);
+        
+        // Convert empty strings to null
+        String firstNameUpdate = firstName.isEmpty() ? null : firstName;
+        String lastNameUpdate = lastName.isEmpty() ? null : lastName;
+        String emailUpdate = email.isEmpty() ? null : email;
+        String roleUpdate = role.isEmpty() ? null : role;
+        
+        if (roleUpdate != null && !roleUpdate.equals("CASHIER") && !roleUpdate.equals("MANAGER")) {
+            updateStatus("Role must be CASHIER or MANAGER.", "error");
+            return;
+        }
+        
+        boolean updated = dbManager.updateEmployee(id, firstNameUpdate, lastNameUpdate, emailUpdate, roleUpdate, null);
+        
+        if (updated) {
+            updateStatus("Employee ID " + id + " updated successfully.", "success");
+            clearForm();
+        } else {
+            updateStatus("Failed to update employee or ID not found.", "error");
+        }
+    }
+    
+    // UI Helper Methods
+    private void showManagementSection(String title) {
+        if (managementSection != null) {
+            managementSection.setVisible(true);
+            managementSection.setManaged(true);
+        }
+        if (managementTitle != null) {
+            managementTitle.setText(title);
+        }
+    }
+    
+    private void hideManagementSection() {
+        if (managementSection != null) {
+            managementSection.setVisible(false);
+            managementSection.setManaged(false);
+        }
+        hideDisplayPane();
+        hideFormSection();
+    }
+    
+    private void showDisplayPane() {
+        if (displayPane != null) {
+            displayPane.setVisible(true);
+            displayPane.setManaged(true);
+        }
+    }
+    
+    private void hideDisplayPane() {
+        if (displayPane != null) {
+            displayPane.setVisible(false);
+            displayPane.setManaged(false);
+        }
+    }
+    
+    private void showFormSection() {
+        if (formSection != null) {
+            formSection.setVisible(true);
+            formSection.setManaged(true);
+        }
+    }
+    
+    private void hideFormSection() {
+        if (formSection != null) {
+            formSection.setVisible(false);
+            formSection.setManaged(false);
+        }
+    }
+    
+    private void clearForm() {
+        if (idField != null) idField.clear();
+        if (field1 != null) field1.clear();
+        if (field2 != null) field2.clear();
+        if (field3 != null) field3.clear();
+        if (field4 != null) field4.clear();
+    }
+    
+    private void updateStatus(String message, String type) {
+        if (statusLabel == null) return;
+        statusLabel.setText(message);
+        switch (type.toLowerCase()) {
+            case "error" -> statusLabel.setStyle("-fx-text-fill: red;");
+            case "success" -> statusLabel.setStyle("-fx-text-fill: green;");
+            case "info" -> statusLabel.setStyle("-fx-text-fill: blue;");
+            default -> statusLabel.setStyle("-fx-text-fill: black;");
+        }
     }
 }
