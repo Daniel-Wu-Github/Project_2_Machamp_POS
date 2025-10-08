@@ -17,6 +17,9 @@ import javafx.scene.chart.XYChart;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controller class for the Main View of the Machamp POS System
@@ -62,6 +65,10 @@ public class MainController implements Initializable {
 
     // State for customization
     private String selectedDrinkName;
+    private String selectedSize = "Medium"; // default
+    private String selectedSugar = "Normal"; // default
+    private final List<String> selectedToppings = new ArrayList<>();
+    private final List<String> orderItems = new ArrayList<>(); // stored orders
     
     /**
      * Initialize method called when the FXML is loaded
@@ -91,14 +98,8 @@ public class MainController implements Initializable {
         if (foodTabBtn != null) foodTabBtn.setOnAction(e -> filterCategory("Food"));
         if (merchTabBtn != null) merchTabBtn.setOnAction(e -> filterCategory("Merch"));
 
-        // Sample actions for customization buttons
-        if (continueCustomizationBtn != null) {
-            continueCustomizationBtn.setOnAction(e -> {
-                Alert a = new Alert(AlertType.INFORMATION, "Added '" + selectedDrinkName + "' to order (demo)");
-                a.show();
-                showOrdersPage();
-            });
-        }
+        setupSelectionHandlers();
+        setupContinueHandler();
 
         // Populate chart data programmatically (avoids FXML load coercion issues)
         if (salesLineChart != null) {
@@ -221,6 +222,7 @@ public class MainController implements Initializable {
     public void showCustomizationPage(String drinkName) {
         selectedDrinkName = drinkName;
         customizationDrinkTitle.setText(drinkName);
+        resetSelections();
         showPane(customizationPane);
     }
 
@@ -245,5 +247,82 @@ public class MainController implements Initializable {
     private void filterCategory(String category) {
         // Placeholder: implement filtering logic when categories beyond Drinks are added
         System.out.println("Category selected: " + category);
+    }
+
+    // ---------------- Ordering Mechanic ----------------
+    private void setupSelectionHandlers() {
+        if (sizeSmallBtn != null) sizeSmallBtn.setOnAction(e -> selectSize("Small"));
+        if (sizeMediumBtn != null) sizeMediumBtn.setOnAction(e -> selectSize("Medium"));
+        if (sizeLargeBtn != null) sizeLargeBtn.setOnAction(e -> selectSize("Large"));
+
+        if (sugarNoneBtn != null) sugarNoneBtn.setOnAction(e -> selectSugar("No Sugar"));
+        if (sugarHalfBtn != null) sugarHalfBtn.setOnAction(e -> selectSugar("Half Sugar"));
+        if (sugarNormalBtn != null) sugarNormalBtn.setOnAction(e -> selectSugar("Normal"));
+
+        if (toppingBobaBtn != null) toppingBobaBtn.setOnAction(e -> toggleTopping("Boba", toppingBobaBtn));
+        if (toppingLycheeBtn != null) toppingLycheeBtn.setOnAction(e -> toggleTopping("Lychee Jelly", toppingLycheeBtn));
+        if (toppingPuddingBtn != null) toppingPuddingBtn.setOnAction(e -> toggleTopping("Pudding", toppingPuddingBtn));
+    }
+
+    private void setupContinueHandler() {
+        if (continueCustomizationBtn == null) return;
+        continueCustomizationBtn.setOnAction(e -> {
+            String orderStr = buildOrderString();
+            orderItems.add(orderStr);
+            Alert a = new Alert(AlertType.INFORMATION, orderStr);
+            a.setHeaderText("Order Added");
+            a.show();
+            showOrdersPage();
+            System.out.println("Current Orders: " + orderItems);
+        });
+    }
+
+    private String buildOrderString() {
+        String toppingsPart = selectedToppings.isEmpty() ? "No Toppings" : selectedToppings.stream().collect(Collectors.joining(", "));
+        return String.format("%s | Size: %s | Sugar: %s | Toppings: %s", selectedDrinkName, selectedSize, selectedSugar, toppingsPart);
+    }
+
+    private void selectSize(String size) {
+        selectedSize = size;
+        highlightSizeButtons();
+    }
+
+    private void selectSugar(String sugar) {
+        selectedSugar = sugar;
+        highlightSugarButtons();
+    }
+
+    private void toggleTopping(String topping, Button btn) {
+        if (selectedToppings.contains(topping)) {
+            selectedToppings.remove(topping);
+            btn.setStyle("");
+        } else {
+            selectedToppings.add(topping);
+            btn.setStyle("-fx-background-color: #b3e5fc;");
+        }
+    }
+
+    private void highlightSizeButtons() {
+        if (sizeSmallBtn != null) sizeSmallBtn.setStyle(selectedSize.equals("Small")? "-fx-background-color: #c5e1a5;" : "");
+        if (sizeMediumBtn != null) sizeMediumBtn.setStyle(selectedSize.equals("Medium")? "-fx-background-color: #c5e1a5;" : "");
+        if (sizeLargeBtn != null) sizeLargeBtn.setStyle(selectedSize.equals("Large")? "-fx-background-color: #c5e1a5;" : "");
+    }
+
+    private void highlightSugarButtons() {
+        if (sugarNoneBtn != null) sugarNoneBtn.setStyle(selectedSugar.equals("No Sugar")? "-fx-background-color: #ffd54f;" : "");
+        if (sugarHalfBtn != null) sugarHalfBtn.setStyle(selectedSugar.equals("Half Sugar")? "-fx-background-color: #ffd54f;" : "");
+        if (sugarNormalBtn != null) sugarNormalBtn.setStyle(selectedSugar.equals("Normal")? "-fx-background-color: #ffd54f;" : "");
+    }
+
+    private void resetSelections() {
+        selectedSize = "Medium";
+        selectedSugar = "Normal";
+        selectedToppings.clear();
+        // clear styles
+        if (toppingBobaBtn != null) toppingBobaBtn.setStyle("");
+        if (toppingLycheeBtn != null) toppingLycheeBtn.setStyle("");
+        if (toppingPuddingBtn != null) toppingPuddingBtn.setStyle("");
+        highlightSizeButtons();
+        highlightSugarButtons();
     }
 }
