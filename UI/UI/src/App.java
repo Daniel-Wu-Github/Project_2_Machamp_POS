@@ -5,6 +5,8 @@
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import java.util.List;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -19,27 +21,16 @@ public class App extends Application {
     @Override
     public void start(Stage stage) {
         this.primaryStage = stage;
-        showOrdersPage(); // Start with Orders Page
-        stage.setTitle("Machamp POS");
-        stage.show();
-    }
-
-    public void showOrdersPage() {
-        OrdersPage ordersPage = new OrdersPage(this);
-        Scene scene = new Scene(ordersPage.getRoot(), 900, 600);
-        primaryStage.setScene(scene);
-    }
-
-    public void showManagerPortal() {
-        ManagerPortalPage managerPage = new ManagerPortalPage(this);
-        Scene scene = new Scene(managerPage.getRoot(), 900, 600);
-        primaryStage.setScene(scene);
-    }
-
-    public void showCustomizationPage(String drinkName) {
-        CustomizationPage customPage = new CustomizationPage(this, drinkName);
-        Scene scene = new Scene(customPage.getRoot(), 900, 600);
-        primaryStage.setScene(scene);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("../out/MainView.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 900, 600);
+            stage.setScene(scene);
+            stage.setTitle("Machamp POS");
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
