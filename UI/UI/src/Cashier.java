@@ -25,7 +25,7 @@ public class Cashier extends Employee {
         // Temporary: return a fake order id derived from hash.
         return Math.abs(items.hashCode());
     }
-
+    
     /**
      * Convenience overload using list of itemIds (quantity = 1 each).
      */
