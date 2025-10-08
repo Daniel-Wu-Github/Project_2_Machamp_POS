@@ -36,7 +36,10 @@ public class MainController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Initialize any components or set default values here
-        statusLabel.setText("System ready");
+    if (statusLabel != null) statusLabel.setText("System ready");
+    System.out.println("[MainController] initialize: productNameField=" + (productNameField != null)
+        + ", priceField=" + (priceField != null) + ", addButton=" + (addProductButton != null)
+        + ", clearButton=" + (clearButton != null) + ", statusLabel=" + (statusLabel != null));
         
         // Add listeners or validation if needed
         setupValidation();
@@ -87,6 +90,32 @@ public class MainController implements Initializable {
     private void handleClear(ActionEvent event) {
         clearFields();
         updateStatus("Fields cleared", "info");
+    }
+
+    // Handlers for the main view buttons (wired in out/MainView.fxml)
+    @FXML
+    private void handleOrder(ActionEvent event) {
+        System.out.println("[MainController] Order button clicked");
+    }
+
+    @FXML
+    private void handleManager(ActionEvent event) {
+        System.out.println("[MainController] Manager button clicked");
+    }
+
+    @FXML
+    private void handleDrinks(ActionEvent event) {
+        System.out.println("[MainController] Drinks button clicked");
+    }
+
+    @FXML
+    private void handleFood(ActionEvent event) {
+        System.out.println("[MainController] Food button clicked");
+    }
+
+    @FXML
+    private void handleMerch(ActionEvent event) {
+        System.out.println("[MainController] Merch button clicked");
     }
     
     /**
