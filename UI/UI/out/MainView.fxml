@@ -22,14 +22,6 @@
             </VBox>
          </left>
          <top>
-            <HBox spacing="10" alignment="CENTER" BorderPane.alignment="CENTER">
-               <children>
-                  <Button fx:id="drinksTabBtn" text="Drinks" />
-                  <Button fx:id="foodTabBtn" text="Food" />
-                  <Button fx:id="merchTabBtn" text="Merch" />
-               </children>
-               <padding><Insets top="10" bottom="10" left="10" right="10"/></padding>
-            </HBox>
          </top>
          <center>
             <FlowPane fx:id="drinksGrid" hgap="20" vgap="20" BorderPane.alignment="CENTER">
