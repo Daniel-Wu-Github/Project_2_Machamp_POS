@@ -67,6 +67,7 @@ public class MainController implements Initializable {
     @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
     @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
     @FXML private Button generateReportBtn;
+    @FXML private Button generateInventoryReportBtn;
     
     // Management UI components
     @FXML private VBox managementSection;
@@ -170,6 +171,7 @@ public class MainController implements Initializable {
         
         // Reports button
         if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+        if (generateInventoryReportBtn != null) generateInventoryReportBtn.setOnAction(e -> handleGenerateInventoryReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -593,6 +595,39 @@ public class MainController implements Initializable {
         updateStatus("Select date range for sales report.", "info");
     }
     
+    private void handleGenerateInventoryReport() {
+        currentOperation = "generate_inventory_report";
+        showManagementSection("Generate Inventory Report");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for date range selection
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("");
+        field2Label.setText("");
+        field3Label.setText("");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        field1.setVisible(false);
+        field1.setManaged(false);
+        field2.setVisible(false);
+        field2.setManaged(false);
+        field3.setVisible(false);
+        field3.setManaged(false);
+        
+        // Show date range container
+        dateRangeContainer.setVisible(true);
+        dateRangeContainer.setManaged(true);
+        
+        // Set default dates to today
+        java.time.LocalDate today = java.time.LocalDate.now();
+        startDatePicker.setValue(today);
+        endDatePicker.setValue(today);
+        
+        updateStatus("Select date range for inventory report.", "info");
+    }
+    
     // Form handling methods
     private void handleSubmit() {
         try {
@@ -604,6 +639,7 @@ public class MainController implements Initializable {
                 case "add_employee" -> submitAddEmployee();
                 case "update_employee" -> submitUpdateEmployee();
                 case "generate_report" -> submitGenerateReport();
+                case "generate_inventory_report" -> submitGenerateInventoryReport();
                 default -> updateStatus("Unknown operation", "error");
             }
         } catch (Exception e) {
@@ -817,6 +853,32 @@ public class MainController implements Initializable {
         displayArea.setText(reportContent);
         
         updateStatus("Sales report generated successfully for " + startDate + " to " + endDate, "success");
+    }
+    
+    private void submitGenerateInventoryReport() throws Exception {
+        java.time.LocalDate startDate = startDatePicker.getValue();
+        java.time.LocalDate endDate = endDatePicker.getValue();
+        
+        if (startDate == null || endDate == null) {
+            updateStatus("Please select both start and end dates.", "error");
+            return;
+        }
+        
+        if (endDate.isBefore(startDate)) {
+            updateStatus("End date cannot be before start date.", "error");
+            return;
+        }
+        
+        // Generate the inventory report with selected date range
+        Reports reports = new Reports(startDate, endDate);
+        String reportContent = reports.generateInventoryUsageReport(dbManager);
+        
+        // Hide form and show display area with report
+        hideFormSection();
+        showDisplayPane();
+        displayArea.setText(reportContent);
+        
+        updateStatus("Inventory report generated successfully for " + startDate + " to " + endDate, "success");
     }
     
     // UI Helper Methods
