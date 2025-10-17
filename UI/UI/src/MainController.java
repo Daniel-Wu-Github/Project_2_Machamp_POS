@@ -37,14 +37,22 @@ public class MainController implements Initializable {
     @FXML private BorderPane ordersPane;
     @FXML private BorderPane customizationPane;
     @FXML private BorderPane managerPane;
+    @FXML private BorderPane orderViewPane;
 
     // Orders page controls
     @FXML private FlowPane drinksGrid; // existing drink items
     @FXML private Button managerNavBtn;
     @FXML private Button orderNavBtn;
+    @FXML private Button viewCurrentOrderBtn;
     @FXML private Button drinksTabBtn;
     @FXML private Button foodTabBtn;
     @FXML private Button merchTabBtn;
+    
+    // Order View page controls
+    @FXML private Button backFromOrderViewBtn;
+    @FXML private Button clearOrderBtn;
+    @FXML private VBox orderItemsContainer;
+    @FXML private Label orderTotalLabel;
 
     // Customization page controls
     @FXML private Label customizationDrinkTitle;
@@ -122,11 +130,18 @@ public class MainController implements Initializable {
         // Navigation buttons
         if (managerNavBtn != null) managerNavBtn.setOnAction(e -> showManagerPortal());
         if (orderNavBtn != null) orderNavBtn.setOnAction(e -> showOrdersPage());
+        if (viewCurrentOrderBtn != null) viewCurrentOrderBtn.setOnAction(e -> showOrderView());
         if (backFromCustomizationBtn != null) {
             backFromCustomizationBtn.setOnAction(e -> showOrdersPage());
         }
         if (backFromManagerBtn != null) {
             backFromManagerBtn.setOnAction(e -> showOrdersPage());
+        }
+        if (backFromOrderViewBtn != null) {
+            backFromOrderViewBtn.setOnAction(e -> showOrdersPage());
+        }
+        if (clearOrderBtn != null) {
+            clearOrderBtn.setOnAction(e -> handleClearOrder());
         }
         
         // Management buttons - Menu
@@ -286,6 +301,72 @@ public class MainController implements Initializable {
 
     public void showManagerPortal() {
         showPane(managerPane);
+    }
+
+    public void showOrderView() {
+        updateOrderView();
+        showPane(orderViewPane);
+    }
+    
+    private void updateOrderView() {
+        if (orderItemsContainer == null) return;
+        
+        // Clear existing items
+        orderItemsContainer.getChildren().clear();
+        
+        if (orderItems.isEmpty()) {
+            Label emptyLabel = new Label("No items in order yet.");
+            emptyLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: gray;");
+            orderItemsContainer.getChildren().add(emptyLabel);
+        } else {
+            // Add each order item as a card
+            for (int i = 0; i < orderItems.size(); i++) {
+                String item = orderItems.get(i);
+                VBox itemCard = createOrderItemCard(i + 1, item);
+                orderItemsContainer.getChildren().add(itemCard);
+            }
+        }
+        
+        // Update total label
+        if (orderTotalLabel != null) {
+            orderTotalLabel.setText("Total Items: " + orderItems.size());
+        }
+    }
+    
+    private VBox createOrderItemCard(int itemNumber, String itemDetails) {
+        VBox card = new VBox(5);
+        card.setStyle("-fx-background-color: #f5f5f5; -fx-padding: 10; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
+        
+        Label numberLabel = new Label("Item #" + itemNumber);
+        numberLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+        
+        Label detailsLabel = new Label(itemDetails);
+        detailsLabel.setStyle("-fx-font-size: 13px;");
+        detailsLabel.setWrapText(true);
+        
+        card.getChildren().addAll(numberLabel, detailsLabel);
+        return card;
+    }
+    
+    private void handleClearOrder() {
+        if (orderItems.isEmpty()) {
+            Alert alert = new Alert(AlertType.INFORMATION, "Order is already empty.");
+            alert.setHeaderText("No Items");
+            alert.show();
+            return;
+        }
+        
+        Alert confirmAlert = new Alert(AlertType.CONFIRMATION, "Are you sure you want to clear all items from the order?");
+        confirmAlert.setHeaderText("Clear Order");
+        confirmAlert.showAndWait().ifPresent(response -> {
+            if (response == javafx.scene.control.ButtonType.OK) {
+                orderItems.clear();
+                updateOrderView();
+                Alert successAlert = new Alert(AlertType.INFORMATION, "Order has been cleared.");
+                successAlert.setHeaderText("Order Cleared");
+                successAlert.show();
+            }
+        });
     }
 
     private void setupDrinkItemHandlers() {
