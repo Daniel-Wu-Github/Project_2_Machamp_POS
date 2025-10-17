@@ -31,6 +31,101 @@ public class Reports {
         this.endDate = today;
     }
 
+    /**
+     * Generate an "X-report" for the current startDate (assumed single day):
+     * - For each hour (00..23) compute totals: sales (sum of total_price), count of orders
+     *   and optionally separate counts/sums for order_type values like RETURN, VOID, DISCARD
+     * - Also provide a breakdown by payment_method when that column exists
+     *
+     * This method is defensive: it detects whether the optional columns exist and falls
+     * back to treating all rows as SALES if not present.
+     */
+    public String generateXReport(DatabaseManager db) throws SQLException {
+        // We'll use the startDate (if range spans multiple days, limit to startDate only)
+        String dayMmddyyyy = startDate.format(DateTimeFormatter.ofPattern("MMddyyyy"));
+
+        // Detect optional columns in orderhistory table
+        boolean hasOrderType = false;
+        boolean hasPayment = false;
+        try (Statement s = db.getConnection().createStatement(); ResultSet rs = s.executeQuery("PRAGMA table_info('orderhistory')")) {
+            while (rs.next()) {
+                String col = rs.getString("name");
+                if ("order_type".equalsIgnoreCase(col)) hasOrderType = true;
+                if ("payment_method".equalsIgnoreCase(col)) hasPayment = true;
+            }
+        }
+
+        // Base query: select hour, total_price, order_type, payment_method when available
+        StringBuilder sbSql = new StringBuilder("SELECT substr(order_datetime,9,2) AS hour");
+        sbSql.append(", SUM(total_price) AS total_sales, COUNT(*) AS cnt");
+        if (hasOrderType) sbSql.append(", order_type");
+        if (hasPayment) sbSql.append(", payment_method");
+        sbSql.append(" FROM orderhistory WHERE substr(order_datetime,1,8)=? GROUP BY hour");
+        if (hasOrderType) sbSql.append(", order_type");
+        if (hasPayment) sbSql.append(", payment_method");
+
+        // We'll collect per-hour aggregates and also payment-method totals
+        Map<Integer, Double> hourSales = new java.util.TreeMap<>();
+        Map<Integer, Integer> hourCount = new java.util.TreeMap<>();
+        Map<Integer, Map<String, Double>> hourByTypeSales = new java.util.HashMap<>();
+        Map<Integer, Map<String, Integer>> hourByTypeCount = new java.util.HashMap<>();
+        Map<String, Double> paymentTotals = new java.util.HashMap<>();
+
+        try (PreparedStatement ps = db.getConnection().prepareStatement(sbSql.toString())) {
+            ps.setString(1, dayMmddyyyy);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String hourStr = rs.getString("hour");
+                    int h = 0;
+                    try { h = Integer.parseInt(hourStr); } catch (Exception ex) { /* default 0 */ }
+                    double sales = rs.getDouble("total_sales");
+                    int cnt = rs.getInt("cnt");
+                    hourSales.put(h, hourSales.getOrDefault(h, 0.0) + sales);
+                    hourCount.put(h, hourCount.getOrDefault(h, 0) + cnt);
+                    if (hasOrderType) {
+                        String type = rs.getString("order_type");
+                        if (type == null) type = "SALE";
+                        hourByTypeSales.computeIfAbsent(h, k->new java.util.HashMap<>()).merge(type, sales, Double::sum);
+                        hourByTypeCount.computeIfAbsent(h, k->new java.util.HashMap<>()).merge(type, cnt, Integer::sum);
+                    }
+                    if (hasPayment) {
+                        String pm = rs.getString("payment_method");
+                        if (pm == null) pm = "UNKNOWN";
+                        paymentTotals.merge(pm, sales, Double::sum);
+                    }
+                }
+            }
+        }
+
+        // Build output for hours 00..23
+        StringBuilder out = new StringBuilder();
+        out.append("X-Report for ").append(startDate.format(DateTimeFormatter.ISO_DATE)).append("\n");
+        out.append(String.format("%3s | %10s | %8s", "HR", "Sales", "Orders")).append("\n");
+        out.append("--------------------------------\n");
+        double dayTotal = 0.0; int dayOrders = 0;
+        for (int hour = 0; hour < 24; hour++) {
+            double sVal = hourSales.getOrDefault(hour, 0.0);
+            int cVal = hourCount.getOrDefault(hour, 0);
+            dayTotal += sVal; dayOrders += cVal;
+            out.append(String.format("%02d   | $%9.2f | %8d\n", hour, sVal, cVal));
+            if (hasOrderType && hourByTypeSales.containsKey(hour)) {
+                var map = hourByTypeSales.get(hour);
+                for (var e : map.entrySet()) {
+                    out.append(String.format("     - %s: $%.2f (%d)\n", e.getKey(), e.getValue(), hourByTypeCount.get(hour).getOrDefault(e.getKey(), 0)));
+                }
+            }
+        }
+        out.append("--------------------------------\n");
+        out.append(String.format("DAILY TOTAL | $%.2f | %d orders\n", dayTotal, dayOrders));
+        if (hasPayment) {
+            out.append("\nPayment method breakdown:\n");
+            for (var e : paymentTotals.entrySet()) {
+                out.append(String.format(" - %s: $%.2f\n", e.getKey(), e.getValue()));
+            }
+        }
+        return out.toString();
+    }
+
     public Reports(LocalDate start, LocalDate end) {
         if (end.isBefore(start)) throw new IllegalArgumentException("End date cannot be before start date");
         this.startDate = start;

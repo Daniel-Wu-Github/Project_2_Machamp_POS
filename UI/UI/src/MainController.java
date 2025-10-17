@@ -17,10 +17,14 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 
 import java.net.URL;
+import java.time.LocalDate;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +70,7 @@ public class MainController implements Initializable {
     @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
     @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
     @FXML private Button generateReportBtn;
+    @FXML private Button xReportBtn;
     
     // Management UI components
     @FXML private VBox managementSection;
@@ -80,26 +85,7 @@ public class MainController implements Initializable {
     @FXML private DatePicker startDatePicker, endDatePicker;
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
-    
-    // Management buttons
-    @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
-    @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
-    @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
-    @FXML private Button generateReportBtn;
-    
-    // Management UI components
-    @FXML private VBox managementSection;
-    @FXML private Label managementTitle;
-    @FXML private ScrollPane displayPane;
-    @FXML private TextArea displayArea;
-    @FXML private VBox formSection;
-    @FXML private TextField idField, field1, field2, field3, field4;
-    @FXML private Label field1Label, field2Label, field3Label, field4Label;
-    @FXML private HBox field4Container;
-    @FXML private HBox dateRangeContainer;
-    @FXML private DatePicker startDatePicker, endDatePicker;
-    @FXML private Button submitBtn, cancelBtn;
-    @FXML private Label statusLabel;
+
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
@@ -167,6 +153,7 @@ public class MainController implements Initializable {
         
         // Reports button
         if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    if (xReportBtn != null) xReportBtn.setOnAction(e -> handleXReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -367,6 +354,34 @@ public class MainController implements Initializable {
             
         } catch (Exception e) {
             updateStatus("Error loading menu: " + e.getMessage(), "error");
+            e.printStackTrace();
+        }
+    }
+
+    // Generate and display the X-Report (hourly activity for the current day)
+    private void handleXReport() {
+        try {
+            Reports r = new Reports(); // default uses today
+            String report = r.generateXReport(dbManager);
+
+            // Show in a modal dialog with scrollable, read-only TextArea
+            Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("X-Report");
+            alert.setHeaderText("Hourly Activity for " + r.getStartDate().toString());
+            TextArea ta = new TextArea(report);
+            ta.setEditable(false);
+            ta.setWrapText(true);
+            ta.setMaxWidth(Double.MAX_VALUE);
+            ta.setMaxHeight(Double.MAX_VALUE);
+            // Ensure dialog resizes to content
+            alert.getDialogPane().setExpandableContent(ta);
+            alert.getDialogPane().setExpanded(true);
+            alert.getDialogPane().setPrefSize(700, 500);
+            alert.showAndWait();
+
+            updateStatus("X-Report generated.", "info");
+        } catch (Exception e) {
+            updateStatus("Failed to generate X-Report: " + e.getMessage(), "error");
             e.printStackTrace();
         }
     }
