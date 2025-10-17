@@ -17,12 +17,19 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 
 import java.net.URL;
 import java.util.ResourceBundle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.sql.SQLException;
 
 /**
  * Controller class for the Main View of the Machamp POS System
@@ -936,16 +943,167 @@ public class MainController implements Initializable {
             return;
         }
         
-        // Generate the inventory report with selected date range
-        Reports reports = new Reports(startDate, endDate);
-        String reportContent = reports.generateInventoryUsageReport(dbManager);
+        // Get the inventory usage data
+        Map<String, Integer> ingredientUsage = getIngredientUsageData(startDate, endDate);
         
-        // Hide form and show display area with report
+        // Hide form section
         hideFormSection();
-        showDisplayPane();
-        displayArea.setText(reportContent);
         
-        updateStatus("Inventory report generated successfully for " + startDate + " to " + endDate, "success");
+        if (ingredientUsage.isEmpty()) {
+            // If no data, show a message in the text area
+            showDisplayPane();
+            displayArea.setText("No ingredient usage data found for the selected date range.\n" +
+                              "Date Range: " + startDate + " to " + endDate);
+            updateStatus("No inventory data found for the selected period.", "info");
+            return;
+        }
+        
+        // Create a bar chart for inventory usage
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Ingredients");
+        
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Units Used");
+        
+        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setTitle("Inventory Usage Report (" + startDate + " to " + endDate + ")");
+        barChart.setLegendVisible(false);
+        
+        // Create data series
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Ingredient Usage");
+        
+        // Add data to the series
+        for (Map.Entry<String, Integer> entry : ingredientUsage.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+        
+        barChart.getData().add(series);
+        
+        // Set chart size
+        barChart.setPrefHeight(500);
+        barChart.setPrefWidth(700);
+        
+        // Clear the display pane and add the chart
+        if (displayPane != null) {
+            displayPane.setContent(barChart);
+            displayPane.setVisible(true);
+            displayPane.setManaged(true);
+        }
+        
+        updateStatus("Inventory report chart generated successfully for " + startDate + " to " + endDate, "success");
+    }
+    
+    /**
+     * Helper method to get ingredient usage data from the database
+     * Returns a map of ingredient names to quantities used, sorted by usage (descending)
+     */
+    private Map<String, Integer> getIngredientUsageData(java.time.LocalDate startDate, java.time.LocalDate endDate) throws SQLException {
+        java.time.format.DateTimeFormatter DATE_ONLY = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+        String startStr = startDate.format(DATE_ONLY);
+        String endStr = endDate.format(DATE_ONLY);
+        
+        // First, get all orders in the date range with their menu items
+        String orderSql = "SELECT menu_items FROM orderhistory WHERE " +
+            "(substr(order_datetime,5,4)||substr(order_datetime,1,2)||substr(order_datetime,3,2)) BETWEEN ? AND ?";
+        
+        // Map to track ingredient usage: ingredient name -> quantity used
+        Map<String, Integer> ingredientUsage = new LinkedHashMap<>();
+        
+        try (java.sql.PreparedStatement ps = dbManager.getConnection().prepareStatement(orderSql)) {
+            ps.setString(1, startStr);
+            ps.setString(2, endStr);
+            
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String raw = rs.getString("menu_items");
+                    if (raw == null || raw.isBlank()) continue;
+                    
+                    // Parse menu items JSON: {"Drink Name": [qty, ...], ...}
+                    Map<String, Integer> drinksInOrder = new LinkedHashMap<>();
+                    int i = 0;
+                    int len = raw.length();
+                    while (i < len) {
+                        int qs = raw.indexOf('"', i);
+                        if (qs < 0) break;
+                        int qe = raw.indexOf('"', qs + 1);
+                        if (qe < 0) break;
+                        String drinkName = raw.substring(qs + 1, qe);
+                        
+                        int listStart = raw.indexOf('[', qe);
+                        if (listStart < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        int listEnd = raw.indexOf(']', listStart);
+                        if (listEnd < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        
+                        String inside = raw.substring(listStart + 1, listEnd).trim();
+                        int qty = 1; // default quantity
+                        if (!inside.isEmpty()) {
+                            // Parse the quantities: [small, medium, large]
+                            String[] quantities = inside.split(",");
+                            int totalQty = 0;
+                            for (String q : quantities) {
+                                try {
+                                    totalQty += Integer.parseInt(q.trim());
+                                } catch (NumberFormatException ignore) {}
+                            }
+                            qty = Math.max(1, totalQty);
+                        }
+                        
+                        drinksInOrder.put(drinkName, qty);
+                        i = listEnd + 1;
+                    }
+                    
+                    // For each drink in the order, look up its ingredients and add to usage
+                    for (Map.Entry<String, Integer> entry : drinksInOrder.entrySet()) {
+                        String drinkName = entry.getKey();
+                        int drinkQty = entry.getValue();
+                        
+                        // Query the drinks table to get ingredients for this drink
+                        String drinkSql = "SELECT ingredients FROM drinks WHERE name = ?";
+                        try (java.sql.PreparedStatement drinkPs = dbManager.getConnection().prepareStatement(drinkSql)) {
+                            drinkPs.setString(1, drinkName);
+                            try (java.sql.ResultSet drinkRs = drinkPs.executeQuery()) {
+                                if (drinkRs.next()) {
+                                    String ingredientsStr = drinkRs.getString("ingredients");
+                                    if (ingredientsStr != null && !ingredientsStr.isBlank()) {
+                                        // Parse ingredients: {Water, Milk, Sugar, Tea}
+                                        ingredientsStr = ingredientsStr.replaceAll("[{}]", "").trim();
+                                        String[] ingredients = ingredientsStr.split(",");
+                                        
+                                        for (String ingredient : ingredients) {
+                                            ingredient = ingredient.trim();
+                                            if (!ingredient.isEmpty()) {
+                                                ingredientUsage.merge(ingredient, drinkQty, Integer::sum);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort ingredients by usage (descending) then by name and return as LinkedHashMap
+        return ingredientUsage.entrySet().stream()
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.getValue(), a.getValue());
+                    if (cmp != 0) return cmp;
+                    return a.getKey().compareTo(b.getKey());
+                })
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    (e1, e2) -> e1,
+                    LinkedHashMap::new
+                ));
     }
     
     // UI Helper Methods
