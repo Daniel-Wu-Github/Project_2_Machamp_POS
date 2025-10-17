@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Consolidated UI: Orders Page, Customization Page, Manager Portal -->
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Rectangle?>
@@ -242,11 +241,6 @@
                               <Label fx:id="statusLabel" text="" />
                            </children>
                         </VBox>
-                        
-                        <LineChart fx:id="salesLineChart" prefHeight="200">
-                           <xAxis><CategoryAxis label="Time" /></xAxis>
-                           <yAxis><NumberAxis label="Sales" /></yAxis>
-                        </LineChart>
                      </children>
                      <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
                   </VBox>

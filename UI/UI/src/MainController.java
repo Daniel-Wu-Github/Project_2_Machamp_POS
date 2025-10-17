@@ -17,8 +17,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.XYChart;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -59,7 +57,6 @@ public class MainController implements Initializable {
     // Manager page controls
     @FXML private Button backFromManagerBtn;
     @FXML private Label dailyEarningsLabel, operatingCostLabel, popularItemLabel;
-    @FXML private LineChart<String, Number> salesLineChart;
     
     
     // Management buttons
@@ -183,17 +180,6 @@ public class MainController implements Initializable {
 
         setupSelectionHandlers();
         setupContinueHandler();
-
-        // Populate chart data programmatically (avoids FXML load coercion issues)
-        if (salesLineChart != null) {
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName("Sales ($)");
-            series.getData().add(new XYChart.Data<>("8:00", 12000));
-            series.getData().add(new XYChart.Data<>("12:00", 30000));
-            series.getData().add(new XYChart.Data<>("16:00", 50000));
-            series.getData().add(new XYChart.Data<>("20:00", 90000));
-            salesLineChart.getData().add(series);
-        }
     }
     
     /**
