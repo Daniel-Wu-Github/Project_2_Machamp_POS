@@ -17,8 +17,11 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
+import javafx.geometry.Insets;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -66,26 +69,7 @@ public class MainController implements Initializable {
     @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
     @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
     @FXML private Button generateReportBtn;
-    
-    // Management UI components
-    @FXML private VBox managementSection;
-    @FXML private Label managementTitle;
-    @FXML private ScrollPane displayPane;
-    @FXML private TextArea displayArea;
-    @FXML private VBox formSection;
-    @FXML private TextField idField, field1, field2, field3, field4;
-    @FXML private Label field1Label, field2Label, field3Label, field4Label;
-    @FXML private HBox field4Container;
-    @FXML private HBox dateRangeContainer;
-    @FXML private DatePicker startDatePicker, endDatePicker;
-    @FXML private Button submitBtn, cancelBtn;
-    @FXML private Label statusLabel;
-    
-    // Management buttons
-    @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
-    @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
-    @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
-    @FXML private Button generateReportBtn;
+    @FXML private Button generateXReportBtn;
     
     // Management UI components
     @FXML private VBox managementSection;
@@ -119,6 +103,51 @@ public class MainController implements Initializable {
     private String selectedSugar = "Normal"; // default
     private final List<String> selectedToppings = new ArrayList<>();
     private final List<String> orderItems = new ArrayList<>(); // stored orders
+    @FXML
+    private void handleGenerateXReport() {
+        try {
+            java.time.LocalDate picked = showDatePickerPopup(java.time.LocalDate.now());
+            if (picked == null) {
+                updateStatus("X Report canceled.", "info");
+                return;
+            }
+
+            showManagementSection("X Report (" + picked + ")");
+            hideFormSection();
+            showDisplayPane();
+
+            DayReports dr = new DayReports();
+            DayReports.XReportResult result = dr.generateXReport(null, picked);
+            displayArea.setText(result.toString());
+            // Use monospaced font so the table columns line up nicely
+            if (displayArea != null) {
+                displayArea.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 12px;");
+            }
+            updateStatus("X Report generated for " + picked + ".", "success");
+        } catch (Exception ex) {
+            updateStatus("Failed to generate X Report: " + ex.getMessage(), "error");
+            ex.printStackTrace();
+        }
+    }
+
+    // Show a modal DatePicker in a popup dialog and return the chosen date, or null if canceled
+    private java.time.LocalDate showDatePickerPopup(java.time.LocalDate defaultDate) {
+        Dialog<java.time.LocalDate> dialog = new Dialog<>();
+        dialog.setTitle("Select Date for X Report");
+        dialog.setHeaderText("Choose a date to generate the X Report");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        javafx.scene.control.DatePicker datePicker = new javafx.scene.control.DatePicker(defaultDate);
+        javafx.scene.control.Label label = new javafx.scene.control.Label("Date:");
+        javafx.scene.layout.HBox row = new javafx.scene.layout.HBox(10, label, datePicker);
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(12, row);
+        content.setPadding(new Insets(10));
+        dialog.getDialogPane().setContent(content);
+
+        dialog.setResultConverter(btn -> btn == ButtonType.OK ? datePicker.getValue() : null);
+        java.util.Optional<java.time.LocalDate> result = dialog.showAndWait();
+        return result.orElse(null);
+    }
     
     /**
      * Initialize method called when the FXML is loaded
@@ -165,8 +194,9 @@ public class MainController implements Initializable {
         if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
         if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
         
-        // Reports button
-        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    // Reports buttons
+    if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -187,8 +217,9 @@ public class MainController implements Initializable {
         if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
         if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
         
-        // Reports button
-        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    // Reports buttons (dup safe)
+    if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
