@@ -214,4 +214,138 @@ public class Reports {
         }
         return sb.toString();
     }
+
+    /**
+     * Generate an inventory usage report showing how much of each ingredient was used
+     * during the specified time window based on orders.
+     * 
+     * This analyzes all orders in the date range, extracts the menu items,
+     * looks up which ingredients are used in each drink, and aggregates the total usage.
+     * 
+     * @param db DatabaseManager instance to query order history and drink ingredients
+     * @return A formatted string containing the inventory usage report
+     * @throws SQLException if database access fails
+     */
+    public String generateInventoryUsageReport(DatabaseManager db) throws SQLException {
+        String startStr = startDate.format(DATE_ONLY);
+        String endStr = endDate.format(DATE_ONLY);
+
+        // First, get all orders in the date range with their menu items
+        String orderSql = "SELECT menu_items FROM orderhistory WHERE " +
+            "(substr(order_datetime,5,4)||substr(order_datetime,1,2)||substr(order_datetime,3,2)) BETWEEN ? AND ?";
+        
+        // Map to track ingredient usage: ingredient name -> quantity used
+        Map<String, Integer> ingredientUsage = new LinkedHashMap<>();
+        int totalOrders = 0;
+        
+        try (PreparedStatement ps = db.getConnection().prepareStatement(orderSql)) {
+            ps.setString(1, startStr);
+            ps.setString(2, endStr);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    totalOrders++;
+                    String raw = rs.getString("menu_items");
+                    if (raw == null || raw.isBlank()) continue;
+                    
+                    // Parse menu items JSON: {"Drink Name": [qty, ...], ...}
+                    // Extract drink names and their quantities
+                    Map<String, Integer> drinksInOrder = new LinkedHashMap<>();
+                    int i = 0;
+                    int len = raw.length();
+                    while (i < len) {
+                        int qs = raw.indexOf('"', i);
+                        if (qs < 0) break;
+                        int qe = raw.indexOf('"', qs + 1);
+                        if (qe < 0) break;
+                        String drinkName = raw.substring(qs + 1, qe);
+                        
+                        int listStart = raw.indexOf('[', qe);
+                        if (listStart < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        int listEnd = raw.indexOf(']', listStart);
+                        if (listEnd < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        
+                        String inside = raw.substring(listStart + 1, listEnd).trim();
+                        int qty = 1; // default quantity
+                        if (!inside.isEmpty()) {
+                            int comma = inside.indexOf(',');
+                            String firstNum = (comma >= 0 ? inside.substring(0, comma) : inside).trim();
+                            try {
+                                qty = Integer.parseInt(firstNum);
+                            } catch (NumberFormatException ignore) {
+                            }
+                        }
+                        
+                        drinksInOrder.put(drinkName, qty);
+                        i = listEnd + 1;
+                    }
+                    
+                    // For each drink in the order, look up its ingredients and add to usage
+                    for (Map.Entry<String, Integer> entry : drinksInOrder.entrySet()) {
+                        String drinkName = entry.getKey();
+                        int drinkQty = entry.getValue();
+                        
+                        // Query the drinks table to get ingredients for this drink
+                        String drinkSql = "SELECT ingredients FROM drinks WHERE name = ?";
+                        try (PreparedStatement drinkPs = db.getConnection().prepareStatement(drinkSql)) {
+                            drinkPs.setString(1, drinkName);
+                            try (ResultSet drinkRs = drinkPs.executeQuery()) {
+                                if (drinkRs.next()) {
+                                    String ingredientsStr = drinkRs.getString("ingredients");
+                                    if (ingredientsStr != null && !ingredientsStr.isBlank()) {
+                                        // Parse ingredients: {Water, Milk, Sugar, Tea}
+                                        // Remove braces and split by comma
+                                        ingredientsStr = ingredientsStr.replaceAll("[{}]", "").trim();
+                                        String[] ingredients = ingredientsStr.split(",");
+                                        
+                                        for (String ingredient : ingredients) {
+                                            ingredient = ingredient.trim();
+                                            if (!ingredient.isEmpty()) {
+                                                // Each drink uses the ingredient, multiply by drink quantity
+                                                ingredientUsage.merge(ingredient, drinkQty, Integer::sum);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort ingredients by usage (descending) then by name
+        var sortedIngredients = ingredientUsage.entrySet().stream()
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.getValue(), a.getValue());
+                    if (cmp != 0) return cmp;
+                    return a.getKey().compareTo(b.getKey());
+                })
+                .collect(Collectors.toList());
+        
+        // Build the report
+        StringBuilder sb = new StringBuilder();
+        sb.append("Inventory Usage Report (").append(startStr).append(" to ").append(endStr).append(")\n");
+        sb.append(String.format("Total Orders Analyzed: %d\n", totalOrders));
+        sb.append("\nIngredient Usage (sorted by quantity used):\n");
+        sb.append("-----------------------------------------------\n");
+        
+        if (sortedIngredients.isEmpty()) {
+            sb.append("No ingredient usage data found for this period.\n");
+        } else {
+            for (var entry : sortedIngredients) {
+                sb.append(String.format("%-30s : %4d units\n", entry.getKey(), entry.getValue()));
+            }
+        }
+        // Footer note
+        sb.append("\n* Note: Usage is based on drinks sold. Each unit represents one drink containing that ingredient.\n");
+        
+        return sb.toString();
+    }
 }
