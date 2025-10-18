@@ -14,8 +14,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import java.io.File;
+import java.io.InputStream;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -283,8 +288,10 @@ public class MainController implements Initializable {
 
         setupSelectionHandlers();
         setupContinueHandler();
+        
+        // Populate default drinks for the menu
+        populateDefaultDrinks();
     }
-    
     /**
      * Handle the Add Product button click
      */
@@ -829,9 +836,135 @@ public class MainController implements Initializable {
         if (id > 0) {
             updateStatus("Menu item '" + name + "' added successfully with ID: " + id, "success");
             clearForm();
+            // Also add a visual tile for the new drink to the orders page so it appears immediately
+            try {
+                addDrinkTile(name, price, id, ingredients);
+            } catch (Exception e) {
+                // Non-fatal: log and continue
+                e.printStackTrace();
+            }
         } else {
             updateStatus("Failed to add menu item.", "error");
         }
+    }
+
+    /**
+     * Create a visual tile for a drink and add it to the drinksGrid FlowPane.
+     * The tile will be clickable and will open the customization page for that drink.
+     */
+    private void addDrinkTile(String name, double price, int id, String ingredients) {
+        if (drinksGrid == null) return;
+
+        VBox tile = new VBox();
+        tile.setSpacing(6);
+        tile.setStyle("-fx-alignment: center; -fx-padding: 8; -fx-border-color: #d0d0d0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-background-color: linear-gradient(#ffffff, #f7f7f7);");
+
+        // Try to load an image for the drink. Prefer classpath /images/, then project folder "bin/Drink Pics/", then "Drink Pics/"
+        String fileName = slugify(name) + ".png";
+        Image img = null;
+        try {
+            InputStream is = getClass().getResourceAsStream("/images/" + fileName);
+            if (is != null) {
+                // Use InputStream overload: (InputStream, requestedWidth, requestedHeight, preserveRatio, smooth)
+                img = new Image(is, 150, 100, true, true);
+            } else {
+                File f = new File("bin/Drink Pics/" + fileName);
+                if (!f.exists()) f = new File("Drink Pics/" + fileName);
+                if (f.exists()) {
+                    img = new Image(f.toURI().toString(), 150, 100, true, true);
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        ImageView thumbView = new ImageView();
+        if (img != null) {
+            thumbView.setImage(img);
+        } else {
+            // fallback visual when no image found
+            Rectangle placeholder = new Rectangle(150, 100);
+            placeholder.setArcWidth(8);
+            placeholder.setArcHeight(8);
+            placeholder.setStyle("-fx-fill: #f0f0f0; -fx-stroke: #cccccc;");
+            // add name and price with placeholder
+            Label nameLbl = new Label(name);
+            Label priceLbl = new Label(String.format("$%.2f", price));
+            tile.getChildren().addAll(placeholder, nameLbl, priceLbl);
+            // Attach tooltip showing ingredients if available
+            if (ingredients != null && !ingredients.isEmpty()) {
+                Tooltip tooltip = new Tooltip("Ingredients: " + ingredients);
+                Tooltip.install(tile, tooltip);
+            }
+            drinksGrid.getChildren().add(tile);
+            return;
+        }
+
+        thumbView.setFitWidth(150);
+        thumbView.setPreserveRatio(true);
+        thumbView.setSmooth(true);
+
+        Label nameLbl = new Label(name);
+        Label priceLbl = new Label(String.format("$%.2f", price));
+
+        // Attach a tooltip showing ingredients if available
+        if (ingredients != null && !ingredients.isEmpty()) {
+            Tooltip tooltip = new Tooltip("Ingredients: " + ingredients);
+            Tooltip.install(thumbView, tooltip);
+        }
+
+        tile.getChildren().addAll(thumbView, nameLbl, priceLbl);
+
+        // Make the tile open the customization page when clicked
+        tile.setOnMouseClicked(e -> showCustomizationPage(name));
+
+        drinksGrid.getChildren().add(tile);
+    }
+
+    /**
+     * Populate a curated list of default drinks into the drinksGrid.
+     */
+    private void populateDefaultDrinks() {
+        String[][] defaults = new String[][] {
+            {"Original Milk Tea", "5.25", "{Water, Milk, Sugar, Tea}"},
+            {"Black Milk Tea", "5.25", "{Water, Milk, Sugar, Black Tea}"},
+            {"Oolong Milk Tea", "5.25", "{Water, Milk, Sugar, Oolong Tea}"},
+            {"Green Milk Tea", "5.25", "{Water, Milk, Sugar, Green Tea}"},
+            {"Capuccino Milk Tea", "6.25", "{Water, Milk, Sugar, Coffee, Cream}"},
+            {"Coconut Milk Tea", "7.25", "{Water, Milk, Sugar, Tea, Coconut}"},
+            {"Ube Milk Tea", "7.25", "{Water, Milk, Sugar, Ube Powder}"},
+            {"Protein Shake Milk Tea", "9.75", "{Water, Milk, Sugar, Tea, Protein Powder}"},
+            {"Ice Blend Latte", "6.25", "{Water, Milk, Sugar, Tea, Protein Powder}"},
+            {"Winter Melon Green Tea", "8.25", "{Water, Sugar, Green Tea, Winter Melon}"},
+            {"Passionfruit Green Tea", "7.25", "{Water, Sugar, Passionfruit, Green Tea}"},
+            {"Mango Green Tea", "3.25", "{Water, Sugar, Green Tea, Mango}"},
+            {"Strawberry Lemonade Tea", "3.25", "{Water, Sugar, Green Tea, Strawberry Lemonade}"},
+            {"Strawberry Matcha", "7.25", "{Water, Sugar, Green Tea, Strawberry}"},
+            {"Peach Oolong Tea", "7.25", "{Water, Sugar, Oolong Tea, Peach}"},
+            {"Secret Matcha", "69.25", "{Water, Matcha}"},
+            {"Free Drink", "0.00", "{Water, Milk, Sugar, Tea}"}
+        };
+
+        for (String[] item : defaults) {
+            String name = item[0];
+            double price = 0.0;
+            try {
+                price = Double.parseDouble(item[1]);
+            } catch (NumberFormatException ex) {
+                // leave price as 0.0
+            }
+            String ingredients = item.length > 2 ? item[2] : "";
+            addDrinkTile(name, price, -1, ingredients);
+        }
+    }
+
+    /** Create a filesystem/classpath-safe filename from a display name */
+    private String slugify(String name) {
+        if (name == null) return "";
+        String s = name.toLowerCase();
+        s = s.replaceAll("[^a-z0-9\\s-]", "");
+        s = s.trim().replaceAll("\\s+", "_");
+        return s;
     }
     
     private void submitUpdateMenuItem() throws Exception {
