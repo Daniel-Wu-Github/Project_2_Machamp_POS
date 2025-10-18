@@ -38,7 +38,7 @@ public class App extends Application {
         DatabaseManager dbManager = new DatabaseManager(true); // true => reset for clean test
 
         // TESTING CODE ---------------------------------------------------------------------
-        try {
+        /*try {
             System.out.println("--- Ingredients ---");
             for (String ingredient : dbManager.listIngredients()) {
                 System.out.println(ingredient);
@@ -67,7 +67,7 @@ public class App extends Application {
         }
         if (reportSummary != null) {
             System.out.println(reportSummary);
-        }
+        }*/
         // Launch JavaFX application (blocking until window closed)
         launch(args);
     }
