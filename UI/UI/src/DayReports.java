@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -159,6 +160,29 @@ public class DayReports {
 
 		return new XReportResult(date, buckets, totalSales, totalTxns);
 	}
+    
+    //z report
+    public String generateZReport(String baseDir, LocalDate date) throws IOException {
+        XReportResult result = generateXReport(baseDir, date);
+        String zText = result.toString().replace("X Report", "Z Report (End of Day)");
+
+        // Write Z report file under /reports/
+        Path reportsDir = Paths.get("reports").toAbsolutePath();
+        if (!Files.exists(reportsDir)) {
+            Files.createDirectories(reportsDir);
+        }
+
+        Path zFile = reportsDir.resolve(String.format("ZReport_%s.txt", date));
+        try (FileWriter writer = new FileWriter(zFile.toFile())) {
+            writer.write(zText);
+        }
+
+        // Optionally record last Z report date to prevent re-run (placeholder)
+        Path flagFile = reportsDir.resolve("last_z_report_date.txt");
+        Files.writeString(flagFile, date.toString());
+
+        return zText + "\n\n[Z Report saved to: " + zFile.toAbsolutePath() + "]";
+    }
 
 	// Attempt to locate orders.csv across likely project paths.
 	private Path resolveOrdersCsv(String baseDir) {

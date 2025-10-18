@@ -137,7 +137,8 @@
                         <!-- Reports -->
                         <Label style="-fx-font-weight: bold;" text="Reports" />
                         <Button fx:id="generateReportBtn" text="Generate Sales Report" />
-                        <Button fx:id="generateXReportBtn" text="Generate X Report (Today)" />
+                        <Button fx:id="generateXReportBtn" text="Generate X Report" />
+                        <Button fx:id="generateZReportBtn" text="Generate Z Report" />
                         <Button fx:id="generateInventoryReportBtn" text="Generate Inventory Report" />
                </children>
                      <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
