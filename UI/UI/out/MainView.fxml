@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Consolidated UI: Orders Page, Customization Page, Manager Portal -->
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.Rectangle?>
-<?import javafx.scene.paint.Color?>
 
-<StackPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="MainController" fx:id="rootStack">
+<!-- Consolidated UI: Orders Page, Customization Page, Manager Portal -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+
+<StackPane fx:id="rootStack" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="MainController">
    <!-- ORDERS PAGE -->
    <children>
-      <BorderPane fx:id="ordersPane" prefWidth="900" prefHeight="600">
+      <BorderPane fx:id="ordersPane" prefHeight="600" prefWidth="900">
          <left>
             <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" BorderPane.alignment="CENTER">
                <content>
@@ -20,49 +34,25 @@
                         <Button fx:id="viewCurrentOrderBtn" text="View Current Order" />
                   <Button fx:id="managerNavBtn" text="Manager" />
                      </children>
-                     <padding><Insets left="20" top="20" right="20" bottom="20"/></padding>
+                     <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
                   </VBox>
                </content>
             </ScrollPane>
          </left>
          <top>
+            <HBox alignment="CENTER" spacing="10" BorderPane.alignment="CENTER">
+               <padding><Insets bottom="10" left="10" right="10" top="10" /></padding>
+            </HBox>
          </top>
          <center>
             <FlowPane fx:id="drinksGrid" hgap="20" vgap="20" BorderPane.alignment="CENTER">
-               <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
-               <!-- Drink Items (VBox with Rectangle + Label) -->
-               <children>
-                  <VBox alignment="CENTER" spacing="5" styleClass="drink-item">
-                     <children>
-                        <Rectangle width="150" height="150" fill="LIGHTGRAY" />
-                        <Label text="Milk Tea" />
-                     </children>
-                  </VBox>
-                  <VBox alignment="CENTER" spacing="5" styleClass="drink-item">
-                     <children>
-                        <Rectangle width="150" height="150" fill="LIGHTGRAY" />
-                        <Label text="Ice Blended Latte" />
-                     </children>
-                  </VBox>
-                  <VBox alignment="CENTER" spacing="5" styleClass="drink-item">
-                     <children>
-                        <Rectangle width="150" height="150" fill="LIGHTGRAY" />
-                        <Label text="Matcha" />
-                     </children>
-                  </VBox>
-                  <VBox alignment="CENTER" spacing="5" styleClass="drink-item">
-                     <children>
-                        <Rectangle width="150" height="150" fill="LIGHTGRAY" />
-                        <Label text="Green Tea" />
-                     </children>
-                  </VBox>
-               </children>
+               <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
             </FlowPane>
          </center>
       </BorderPane>
 
       <!-- CUSTOMIZATION PAGE -->
-      <BorderPane fx:id="customizationPane" visible="false" managed="false" prefWidth="900" prefHeight="600">
+      <BorderPane fx:id="customizationPane" managed="false" prefHeight="600" prefWidth="900" visible="false">
          <left>
             <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" BorderPane.alignment="CENTER">
                <content>
@@ -71,7 +61,7 @@
                         <Label text="Customization" />
                         <Button fx:id="backFromCustomizationBtn" text="Back to Orders" />
                      </children>
-                     <padding><Insets left="20" top="20" right="20" bottom="20"/></padding>
+                     <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
                   </VBox>
                </content>
             </ScrollPane>
@@ -80,48 +70,48 @@
             <VBox alignment="TOP_CENTER" spacing="15" BorderPane.alignment="CENTER">
                <children>
                   <Label fx:id="customizationDrinkTitle" text="Drink Name" />
-                  <Rectangle width="150" height="150" fill="LIGHTGRAY" />
+                  <Rectangle fill="LIGHTGRAY" height="150" width="150" />
                   <HBox alignment="CENTER" spacing="10">
                      <children>
-                        <Button text="Small" fx:id="sizeSmallBtn" />
-                        <Button text="Medium" fx:id="sizeMediumBtn" />
-                        <Button text="Large" fx:id="sizeLargeBtn" />
+                        <Button fx:id="sizeSmallBtn" text="Small" />
+                        <Button fx:id="sizeMediumBtn" text="Medium" />
+                        <Button fx:id="sizeLargeBtn" text="Large" />
                      </children>
                   </HBox>
                   <HBox alignment="CENTER" spacing="10">
                      <children>
-                        <Button text="No Sugar" fx:id="sugarNoneBtn" />
-                        <Button text="Half Sugar" fx:id="sugarHalfBtn" />
-                        <Button text="Normal" fx:id="sugarNormalBtn" />
+                        <Button fx:id="sugarNoneBtn" text="No Sugar" />
+                        <Button fx:id="sugarHalfBtn" text="Half Sugar" />
+                        <Button fx:id="sugarNormalBtn" text="Normal" />
                      </children>
                   </HBox>
                   <VBox alignment="CENTER" spacing="10">
                      <children>
-                        <Button text="Add Boba" fx:id="toppingBobaBtn" />
-                        <Button text="Add Lychee Jelly" fx:id="toppingLycheeBtn" />
-                        <Button text="Add Pudding" fx:id="toppingPuddingBtn" />
+                        <Button fx:id="toppingBobaBtn" text="Add Boba" />
+                        <Button fx:id="toppingLycheeBtn" text="Add Lychee Jelly" />
+                        <Button fx:id="toppingPuddingBtn" text="Add Pudding" />
                      </children>
                   </VBox>
                   <Button fx:id="continueCustomizationBtn" text="Continue →" />
                </children>
-               <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
+               <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
             </VBox>
          </center>
       </BorderPane>
 
       <!-- MANAGER PORTAL PAGE -->
-      <BorderPane fx:id="managerPane" visible="false" managed="false" prefWidth="900" prefHeight="600">
+      <BorderPane fx:id="managerPane" managed="false" prefHeight="600" prefWidth="900" visible="false">
          <left>
             <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" BorderPane.alignment="CENTER">
                <content>
                   <VBox spacing="15">
                      <children>
-                        <Label text="Manager Portal" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Manager Portal" />
                         <Button fx:id="backFromManagerBtn" text="Back to Orders" />
                         <Separator />
                         
                         <!-- Menu Management -->
-                        <Label text="Menu Management" style="-fx-font-weight: bold;" />
+                        <Label style="-fx-font-weight: bold;" text="Menu Management" />
                         <Button fx:id="viewMenuBtn" text="View Menu" />
                         <Button fx:id="addMenuItemBtn" text="Add Menu Item" />
                         <Button fx:id="updateMenuItemBtn" text="Update Menu Item" />
@@ -129,7 +119,7 @@
                         <Separator />
                         
                         <!-- Inventory Management -->
-                        <Label text="Inventory Management" style="-fx-font-weight: bold;" />
+                        <Label style="-fx-font-weight: bold;" text="Inventory Management" />
                         <Button fx:id="viewInventoryBtn" text="View Inventory" />
                         <Button fx:id="addIngredientBtn" text="Add Ingredient" />
                         <Button fx:id="updateInventoryBtn" text="Update Inventory" />
@@ -137,7 +127,7 @@
                         <Separator />
                         
                         <!-- Employee Management -->
-                        <Label text="Employee Management" style="-fx-font-weight: bold;" />
+                        <Label style="-fx-font-weight: bold;" text="Employee Management" />
                         <Button fx:id="viewEmployeesBtn" text="View Employees" />
                         <Button fx:id="addEmployeeBtn" text="Add Employee" />
                         <Button fx:id="updateEmployeeBtn" text="Update Employee" />
@@ -145,97 +135,97 @@
                         <Separator />
                         
                         <!-- Reports -->
-                        <Label text="Reports" style="-fx-font-weight: bold;" />
+                        <Label style="-fx-font-weight: bold;" text="Reports" />
                         <Button fx:id="generateReportBtn" text="Generate Sales Report" />
                         <Button fx:id="generateXReportBtn" text="Generate X Report (Today)" />
                         <Button fx:id="generateInventoryReportBtn" text="Generate Inventory Report" />
                </children>
-                     <padding><Insets left="20" top="20" right="20" bottom="20"/></padding>
+                     <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
                   </VBox>
                </content>
             </ScrollPane>
          </left>
          <center>
-      <ScrollPane fitToWidth="true" fitToHeight="true">
+            <ScrollPane fitToHeight="true" fitToWidth="true">
                <content>
          <VBox spacing="15" BorderPane.alignment="CENTER" fillWidth="true">
                      <children>
-                        <HBox spacing="20" alignment="CENTER">
+                        <HBox alignment="CENTER" spacing="20">
                            <children>
                               <!-- <Label fx:id="dailyEarningsLabel" text="Daily Earnings: $1298.53" />
                               <Label fx:id="operatingCostLabel" text="Operating Cost: $465.43" />
                               <Label fx:id="popularItemLabel" text="Popular: Ice Blended Latte" /> -->
                            </children>
-                           <padding><Insets top="10" bottom="10" left="10" right="10"/></padding>
+                           <padding><Insets bottom="10" left="10" right="10" top="10" /></padding>
                         </HBox>
                         
                         <!-- Management Section Container -->
-                        <VBox fx:id="managementSection" spacing="15" visible="false" managed="false" fillWidth="true">
+                        <VBox fx:id="managementSection" managed="false" spacing="15" visible="false">
                            <children>
-                              <Label fx:id="managementTitle" text="Management" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                              <Label fx:id="managementTitle" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Management" />
                               
                               <!-- Display Area for Lists -->
-                                             <ScrollPane fx:id="displayPane" visible="false" managed="false" prefHeight="250" fitToWidth="true" VBox.vgrow="ALWAYS">
+                              <ScrollPane fx:id="displayPane" managed="false" prefHeight="250" visible="false">
                                  <content>
                                                       <TextArea fx:id="displayArea" editable="false" wrapText="false" maxWidth="Infinity" />
                                  </content>
                               </ScrollPane>
                               
                               <!-- Form Section for Add/Update -->
-                              <VBox fx:id="formSection" spacing="10" visible="false" managed="false">
+                              <VBox fx:id="formSection" managed="false" spacing="10" visible="false">
                                  <children>
                                     <!-- ID Field (for updates) -->
-                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
                                        <children>
-                                          <Label text="ID:" prefWidth="100" />
+                                          <Label prefWidth="100" text="ID:" />
                                           <TextField fx:id="idField" prefWidth="100" promptText="ID for update" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Field 1 -->
-                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
                                        <children>
-                                          <Label fx:id="field1Label" text="Field 1:" prefWidth="100" />
+                                          <Label fx:id="field1Label" prefWidth="100" text="Field 1:" />
                                           <TextField fx:id="field1" prefWidth="250" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Field 2 -->
-                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
                                        <children>
-                                          <Label fx:id="field2Label" text="Field 2:" prefWidth="100" />
+                                          <Label fx:id="field2Label" prefWidth="100" text="Field 2:" />
                                           <TextField fx:id="field2" prefWidth="250" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Field 3 -->
-                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
                                        <children>
-                                          <Label fx:id="field3Label" text="Field 3:" prefWidth="100" />
+                                          <Label fx:id="field3Label" prefWidth="100" text="Field 3:" />
                                           <TextField fx:id="field3" prefWidth="250" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Field 4 (Optional) -->
-                                    <HBox fx:id="field4Container" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                                    <HBox fx:id="field4Container" alignment="CENTER_LEFT" managed="false" spacing="10" visible="false">
                                        <children>
-                                          <Label fx:id="field4Label" text="Field 4:" prefWidth="100" />
+                                          <Label fx:id="field4Label" prefWidth="100" text="Field 4:" />
                                           <TextField fx:id="field4" prefWidth="250" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Date Range Fields (for Reports) -->
-                                    <HBox fx:id="dateRangeContainer" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                                    <HBox fx:id="dateRangeContainer" alignment="CENTER_LEFT" managed="false" spacing="10" visible="false">
                                        <children>
-                                          <Label text="Start Date:" prefWidth="100" />
+                                          <Label prefWidth="100" text="Start Date:" />
                                           <DatePicker fx:id="startDatePicker" prefWidth="150" />
-                                          <Label text="End Date:" prefWidth="80" />
+                                          <Label prefWidth="80" text="End Date:" />
                                           <DatePicker fx:id="endDatePicker" prefWidth="150" />
                                        </children>
                                     </HBox>
                                     
                                     <!-- Buttons -->
-                                    <HBox spacing="10" alignment="CENTER">
+                                    <HBox alignment="CENTER" spacing="10">
                                        <children>
                                           <Button fx:id="submitBtn" text="Submit" />
                                           <Button fx:id="cancelBtn" text="Cancel" />
@@ -248,7 +238,7 @@
                            </children>
                         </VBox>
                      </children>
-                     <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
+                     <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
                   </VBox>
                </content>
             </ScrollPane>
