@@ -97,6 +97,8 @@ public class Reports {
             }
         }
 
+        
+
         // Build output for hours 00..23
         StringBuilder out = new StringBuilder();
         out.append("X-Report for ").append(startDate.format(DateTimeFormatter.ISO_DATE)).append("\n");
