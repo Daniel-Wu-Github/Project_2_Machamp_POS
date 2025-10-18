@@ -246,7 +246,7 @@ public class Reports {
                 sb.append(String.format("%-30s : %4d units\n", entry.getKey(), entry.getValue()));
             }
         }
-        
+        // Footer note
         sb.append("\n* Note: Usage is based on drinks sold. Each unit represents one drink containing that ingredient.\n");
         
         return sb.toString();
