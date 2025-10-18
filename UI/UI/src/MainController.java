@@ -97,6 +97,7 @@ public class MainController implements Initializable {
     @FXML private DatePicker startDatePicker, endDatePicker;
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
+    @FXML private Button generateXReportBtn;
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
