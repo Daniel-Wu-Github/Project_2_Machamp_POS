@@ -98,6 +98,7 @@ public class MainController implements Initializable {
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
     @FXML private Button generateXReportBtn;
+    @FXML private Button generateZReportBtn;
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
@@ -110,6 +111,8 @@ public class MainController implements Initializable {
     
     // Database manager instance
     private DatabaseManager dbManager;
+
+    private final DayReports dayReports = new DayReports();
     
     // Current management operation
     private String currentOperation = "";
@@ -140,6 +143,31 @@ public class MainController implements Initializable {
             updateStatus("X Report generated for " + picked + ".", "success");
         } catch (Exception ex) {
             updateStatus("Failed to generate X Report: " + ex.getMessage(), "error");
+            ex.printStackTrace();
+        }
+    }
+    @FXML
+    private void handleGenerateZReport() {
+        try {
+            java.time.LocalDate picked = showDatePickerPopup(java.time.LocalDate.now());
+            if (picked == null) {
+                updateStatus("Z Report canceled.", "info");
+                return;
+            }
+
+            showManagementSection("Z Report (" + picked + ")");
+            hideFormSection();
+            showDisplayPane();
+
+            String result = dayReports.generateZReport(null, picked);
+            displayArea.setText(result);
+            // Use monospaced font so the table columns line up nicely
+            if (displayArea != null) {
+                displayArea.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 12px;");
+            }
+            updateStatus("Z Report generated for " + picked + ".", "success");
+        } catch (Exception ex) {
+            updateStatus("Failed to generate Z Report: " + ex.getMessage(), "error");
             ex.printStackTrace();
         }
     }
@@ -218,6 +246,7 @@ public class MainController implements Initializable {
     // Reports buttons
     if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
     if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
+    if (generateZReportBtn != null) generateZReportBtn.setOnAction(e -> handleGenerateZReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -241,11 +270,12 @@ public class MainController implements Initializable {
     // Reports buttons (dup safe)
     if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
     if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
-        if (generateInventoryReportBtn != null) generateInventoryReportBtn.setOnAction(e -> handleGenerateInventoryReport());
-        
-        // Form buttons
-        if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
-        if (cancelBtn != null) cancelBtn.setOnAction(e -> handleCancel());
+    if (generateZReportBtn != null) generateZReportBtn.setOnAction(e -> handleGenerateZReport());
+    if (generateInventoryReportBtn != null) generateInventoryReportBtn.setOnAction(e -> handleGenerateInventoryReport());
+
+    // Form buttons
+    if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
+    if (cancelBtn != null) cancelBtn.setOnAction(e -> handleCancel());
 
         if (drinksTabBtn != null) drinksTabBtn.setOnAction(e -> filterCategory("Drinks"));
         if (foodTabBtn != null) foodTabBtn.setOnAction(e -> filterCategory("Food"));
