@@ -22,14 +22,22 @@ import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.chart.LineChart;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.geometry.Insets;
 
 import java.net.URL;
 import java.util.ResourceBundle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.sql.SQLException;
 
 /**
  * Controller class for the Main View of the Machamp POS System
@@ -44,14 +52,22 @@ public class MainController implements Initializable {
     @FXML private BorderPane ordersPane;
     @FXML private BorderPane customizationPane;
     @FXML private BorderPane managerPane;
+    @FXML private BorderPane orderViewPane;
 
     // Orders page controls
     @FXML private FlowPane drinksGrid; // existing drink items
     @FXML private Button managerNavBtn;
     @FXML private Button orderNavBtn;
+    @FXML private Button viewCurrentOrderBtn;
     @FXML private Button drinksTabBtn;
     @FXML private Button foodTabBtn;
     @FXML private Button merchTabBtn;
+    
+    // Order View page controls
+    @FXML private Button backFromOrderViewBtn;
+    @FXML private Button clearOrderBtn;
+    @FXML private VBox orderItemsContainer;
+    @FXML private Label orderTotalLabel;
 
     // Customization page controls
     @FXML private Label customizationDrinkTitle;
@@ -64,13 +80,14 @@ public class MainController implements Initializable {
     // Manager page controls
     @FXML private Button backFromManagerBtn;
     @FXML private Label dailyEarningsLabel, operatingCostLabel, popularItemLabel;
-    @FXML private LineChart<String, Number> salesLineChart;
+    
     
     // Management buttons
     @FXML private Button viewMenuBtn, addMenuItemBtn, updateMenuItemBtn;
     @FXML private Button viewInventoryBtn, addIngredientBtn, updateInventoryBtn;
     @FXML private Button viewEmployeesBtn, addEmployeeBtn, updateEmployeeBtn;
     @FXML private Button generateReportBtn;
+    @FXML private Button generateInventoryReportBtn;
     
     // Management UI components
     @FXML private VBox managementSection;
@@ -85,6 +102,7 @@ public class MainController implements Initializable {
     @FXML private DatePicker startDatePicker, endDatePicker;
     @FXML private Button submitBtn, cancelBtn;
     @FXML private Label statusLabel;
+    @FXML private Button generateXReportBtn;
 
     // Legacy product form (kept if needed for future admin input) - optional null if removed from FXML
     @FXML private TextField productNameField;
@@ -104,6 +122,51 @@ public class MainController implements Initializable {
     private String selectedSugar = "Normal"; // default
     private final List<String> selectedToppings = new ArrayList<>();
     private final List<String> orderItems = new ArrayList<>(); // stored orders
+    @FXML
+    private void handleGenerateXReport() {
+        try {
+            java.time.LocalDate picked = showDatePickerPopup(java.time.LocalDate.now());
+            if (picked == null) {
+                updateStatus("X Report canceled.", "info");
+                return;
+            }
+
+            showManagementSection("X Report (" + picked + ")");
+            hideFormSection();
+            showDisplayPane();
+
+            DayReports dr = new DayReports();
+            DayReports.XReportResult result = dr.generateXReport(null, picked);
+            displayArea.setText(result.toString());
+            // Use monospaced font so the table columns line up nicely
+            if (displayArea != null) {
+                displayArea.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 12px;");
+            }
+            updateStatus("X Report generated for " + picked + ".", "success");
+        } catch (Exception ex) {
+            updateStatus("Failed to generate X Report: " + ex.getMessage(), "error");
+            ex.printStackTrace();
+        }
+    }
+
+    // Show a modal DatePicker in a popup dialog and return the chosen date, or null if canceled
+    private java.time.LocalDate showDatePickerPopup(java.time.LocalDate defaultDate) {
+        Dialog<java.time.LocalDate> dialog = new Dialog<>();
+        dialog.setTitle("Select Date for X Report");
+        dialog.setHeaderText("Choose a date to generate the X Report");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        javafx.scene.control.DatePicker datePicker = new javafx.scene.control.DatePicker(defaultDate);
+        javafx.scene.control.Label label = new javafx.scene.control.Label("Date:");
+        javafx.scene.layout.HBox row = new javafx.scene.layout.HBox(10, label, datePicker);
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(12, row);
+        content.setPadding(new Insets(10));
+        dialog.getDialogPane().setContent(content);
+
+        dialog.setResultConverter(btn -> btn == ButtonType.OK ? datePicker.getValue() : null);
+        java.util.Optional<java.time.LocalDate> result = dialog.showAndWait();
+        return result.orElse(null);
+    }
     
     /**
      * Initialize method called when the FXML is loaded
@@ -128,11 +191,18 @@ public class MainController implements Initializable {
         // Navigation buttons
         if (managerNavBtn != null) managerNavBtn.setOnAction(e -> showManagerPortal());
         if (orderNavBtn != null) orderNavBtn.setOnAction(e -> showOrdersPage());
+        if (viewCurrentOrderBtn != null) viewCurrentOrderBtn.setOnAction(e -> showOrderView());
         if (backFromCustomizationBtn != null) {
             backFromCustomizationBtn.setOnAction(e -> showOrdersPage());
         }
         if (backFromManagerBtn != null) {
             backFromManagerBtn.setOnAction(e -> showOrdersPage());
+        }
+        if (backFromOrderViewBtn != null) {
+            backFromOrderViewBtn.setOnAction(e -> showOrdersPage());
+        }
+        if (clearOrderBtn != null) {
+            clearOrderBtn.setOnAction(e -> handleClearOrder());
         }
         
         // Management buttons - Menu
@@ -150,8 +220,9 @@ public class MainController implements Initializable {
         if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
         if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
         
-        // Reports button
-        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    // Reports buttons
+    if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -172,8 +243,10 @@ public class MainController implements Initializable {
         if (addEmployeeBtn != null) addEmployeeBtn.setOnAction(e -> handleAddEmployee());
         if (updateEmployeeBtn != null) updateEmployeeBtn.setOnAction(e -> handleUpdateEmployee());
         
-        // Reports button
-        if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    // Reports buttons (dup safe)
+    if (generateReportBtn != null) generateReportBtn.setOnAction(e -> handleGenerateReport());
+    if (generateXReportBtn != null) generateXReportBtn.setOnAction(e -> handleGenerateXReport());
+        if (generateInventoryReportBtn != null) generateInventoryReportBtn.setOnAction(e -> handleGenerateInventoryReport());
         
         // Form buttons
         if (submitBtn != null) submitBtn.setOnAction(e -> handleSubmit());
@@ -305,6 +378,72 @@ public class MainController implements Initializable {
 
     public void showManagerPortal() {
         showPane(managerPane);
+    }
+
+    public void showOrderView() {
+        updateOrderView();
+        showPane(orderViewPane);
+    }
+    
+    private void updateOrderView() {
+        if (orderItemsContainer == null) return;
+        
+        // Clear existing items
+        orderItemsContainer.getChildren().clear();
+        
+        if (orderItems.isEmpty()) {
+            Label emptyLabel = new Label("No items in order yet.");
+            emptyLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: gray;");
+            orderItemsContainer.getChildren().add(emptyLabel);
+        } else {
+            // Add each order item as a card
+            for (int i = 0; i < orderItems.size(); i++) {
+                String item = orderItems.get(i);
+                VBox itemCard = createOrderItemCard(i + 1, item);
+                orderItemsContainer.getChildren().add(itemCard);
+            }
+        }
+        
+        // Update total label
+        if (orderTotalLabel != null) {
+            orderTotalLabel.setText("Total Items: " + orderItems.size());
+        }
+    }
+    
+    private VBox createOrderItemCard(int itemNumber, String itemDetails) {
+        VBox card = new VBox(5);
+        card.setStyle("-fx-background-color: #f5f5f5; -fx-padding: 10; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
+        
+        Label numberLabel = new Label("Item #" + itemNumber);
+        numberLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+        
+        Label detailsLabel = new Label(itemDetails);
+        detailsLabel.setStyle("-fx-font-size: 13px;");
+        detailsLabel.setWrapText(true);
+        
+        card.getChildren().addAll(numberLabel, detailsLabel);
+        return card;
+    }
+    
+    private void handleClearOrder() {
+        if (orderItems.isEmpty()) {
+            Alert alert = new Alert(AlertType.INFORMATION, "Order is already empty.");
+            alert.setHeaderText("No Items");
+            alert.show();
+            return;
+        }
+        
+        Alert confirmAlert = new Alert(AlertType.CONFIRMATION, "Are you sure you want to clear all items from the order?");
+        confirmAlert.setHeaderText("Clear Order");
+        confirmAlert.showAndWait().ifPresent(response -> {
+            if (response == javafx.scene.control.ButtonType.OK) {
+                orderItems.clear();
+                updateOrderView();
+                Alert successAlert = new Alert(AlertType.INFORMATION, "Order has been cleared.");
+                successAlert.setHeaderText("Order Cleared");
+                successAlert.show();
+            }
+        });
     }
 
     private void setupDrinkItemHandlers() {
@@ -600,6 +739,39 @@ public class MainController implements Initializable {
         updateStatus("Select date range for sales report.", "info");
     }
     
+    private void handleGenerateInventoryReport() {
+        currentOperation = "generate_inventory_report";
+        showManagementSection("Generate Inventory Report");
+        hideDisplayPane();
+        showFormSection();
+        
+        // Setup form for date range selection
+        idField.setVisible(false);
+        idField.setManaged(false);
+        field1Label.setText("");
+        field2Label.setText("");
+        field3Label.setText("");
+        field4Container.setVisible(false);
+        field4Container.setManaged(false);
+        field1.setVisible(false);
+        field1.setManaged(false);
+        field2.setVisible(false);
+        field2.setManaged(false);
+        field3.setVisible(false);
+        field3.setManaged(false);
+        
+        // Show date range container
+        dateRangeContainer.setVisible(true);
+        dateRangeContainer.setManaged(true);
+        
+        // Set default dates to today
+        java.time.LocalDate today = java.time.LocalDate.now();
+        startDatePicker.setValue(today);
+        endDatePicker.setValue(today);
+        
+        updateStatus("Select date range for inventory report.", "info");
+    }
+    
     // Form handling methods
     private void handleSubmit() {
         try {
@@ -611,6 +783,7 @@ public class MainController implements Initializable {
                 case "add_employee" -> submitAddEmployee();
                 case "update_employee" -> submitUpdateEmployee();
                 case "generate_report" -> submitGenerateReport();
+                case "generate_inventory_report" -> submitGenerateInventoryReport();
                 default -> updateStatus("Unknown operation", "error");
             }
         } catch (Exception e) {
@@ -950,6 +1123,183 @@ public class MainController implements Initializable {
         displayArea.setText(reportContent);
         
         updateStatus("Sales report generated successfully for " + startDate + " to " + endDate, "success");
+    }
+    
+    private void submitGenerateInventoryReport() throws Exception {
+        java.time.LocalDate startDate = startDatePicker.getValue();
+        java.time.LocalDate endDate = endDatePicker.getValue();
+        
+        if (startDate == null || endDate == null) {
+            updateStatus("Please select both start and end dates.", "error");
+            return;
+        }
+        
+        if (endDate.isBefore(startDate)) {
+            updateStatus("End date cannot be before start date.", "error");
+            return;
+        }
+        
+        // Get the inventory usage data
+        Map<String, Integer> ingredientUsage = getIngredientUsageData(startDate, endDate);
+        
+        // Hide form section
+        hideFormSection();
+        
+        if (ingredientUsage.isEmpty()) {
+            // If no data, show a message in the text area
+            showDisplayPane();
+            displayArea.setText("No ingredient usage data found for the selected date range.\n" +
+                              "Date Range: " + startDate + " to " + endDate);
+            updateStatus("No inventory data found for the selected period.", "info");
+            return;
+        }
+        
+        // Create a bar chart for inventory usage
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Ingredients");
+        
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Units Used");
+        
+        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setTitle("Inventory Usage Report (" + startDate + " to " + endDate + ")");
+        barChart.setLegendVisible(false);
+        
+        // Create data series
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Ingredient Usage");
+        
+        // Add data to the series
+        for (Map.Entry<String, Integer> entry : ingredientUsage.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+        
+        barChart.getData().add(series);
+        
+        // Set chart size
+        barChart.setPrefHeight(500);
+        barChart.setPrefWidth(700);
+        
+        // Clear the display pane and add the chart
+        if (displayPane != null) {
+            displayPane.setContent(barChart);
+            displayPane.setVisible(true);
+            displayPane.setManaged(true);
+        }
+        
+        updateStatus("Inventory report chart generated successfully for " + startDate + " to " + endDate, "success");
+    }
+    
+    /**
+     * Helper method to get ingredient usage data from the database
+     * Returns a map of ingredient names to quantities used, sorted by usage (descending)
+     */
+    private Map<String, Integer> getIngredientUsageData(java.time.LocalDate startDate, java.time.LocalDate endDate) throws SQLException {
+        java.time.format.DateTimeFormatter DATE_ONLY = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+        String startStr = startDate.format(DATE_ONLY);
+        String endStr = endDate.format(DATE_ONLY);
+        
+        // First, get all orders in the date range with their menu items
+        String orderSql = "SELECT menu_items FROM orderhistory WHERE " +
+            "(substr(order_datetime,5,4)||substr(order_datetime,1,2)||substr(order_datetime,3,2)) BETWEEN ? AND ?";
+        
+        // Map to track ingredient usage: ingredient name -> quantity used
+        Map<String, Integer> ingredientUsage = new LinkedHashMap<>();
+        
+        try (java.sql.PreparedStatement ps = dbManager.getConnection().prepareStatement(orderSql)) {
+            ps.setString(1, startStr);
+            ps.setString(2, endStr);
+            
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String raw = rs.getString("menu_items");
+                    if (raw == null || raw.isBlank()) continue;
+                    
+                    // Parse menu items JSON: {"Drink Name": [qty, ...], ...}
+                    Map<String, Integer> drinksInOrder = new LinkedHashMap<>();
+                    int i = 0;
+                    int len = raw.length();
+                    while (i < len) {
+                        int qs = raw.indexOf('"', i);
+                        if (qs < 0) break;
+                        int qe = raw.indexOf('"', qs + 1);
+                        if (qe < 0) break;
+                        String drinkName = raw.substring(qs + 1, qe);
+                        
+                        int listStart = raw.indexOf('[', qe);
+                        if (listStart < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        int listEnd = raw.indexOf(']', listStart);
+                        if (listEnd < 0) {
+                            i = qe + 1;
+                            continue;
+                        }
+                        
+                        String inside = raw.substring(listStart + 1, listEnd).trim();
+                        int qty = 1; // default quantity
+                        if (!inside.isEmpty()) {
+                            // Parse the quantities: [small, medium, large]
+                            String[] quantities = inside.split(",");
+                            int totalQty = 0;
+                            for (String q : quantities) {
+                                try {
+                                    totalQty += Integer.parseInt(q.trim());
+                                } catch (NumberFormatException ignore) {}
+                            }
+                            qty = Math.max(1, totalQty);
+                        }
+                        
+                        drinksInOrder.put(drinkName, qty);
+                        i = listEnd + 1;
+                    }
+                    
+                    // For each drink in the order, look up its ingredients and add to usage
+                    for (Map.Entry<String, Integer> entry : drinksInOrder.entrySet()) {
+                        String drinkName = entry.getKey();
+                        int drinkQty = entry.getValue();
+                        
+                        // Query the drinks table to get ingredients for this drink
+                        String drinkSql = "SELECT ingredients FROM drinks WHERE name = ?";
+                        try (java.sql.PreparedStatement drinkPs = dbManager.getConnection().prepareStatement(drinkSql)) {
+                            drinkPs.setString(1, drinkName);
+                            try (java.sql.ResultSet drinkRs = drinkPs.executeQuery()) {
+                                if (drinkRs.next()) {
+                                    String ingredientsStr = drinkRs.getString("ingredients");
+                                    if (ingredientsStr != null && !ingredientsStr.isBlank()) {
+                                        // Parse ingredients: {Water, Milk, Sugar, Tea}
+                                        ingredientsStr = ingredientsStr.replaceAll("[{}]", "").trim();
+                                        String[] ingredients = ingredientsStr.split(",");
+                                        
+                                        for (String ingredient : ingredients) {
+                                            ingredient = ingredient.trim();
+                                            if (!ingredient.isEmpty()) {
+                                                ingredientUsage.merge(ingredient, drinkQty, Integer::sum);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort ingredients by usage (descending) then by name and return as LinkedHashMap
+        return ingredientUsage.entrySet().stream()
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.getValue(), a.getValue());
+                    if (cmp != 0) return cmp;
+                    return a.getKey().compareTo(b.getKey());
+                })
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    (e1, e2) -> e1,
+                    LinkedHashMap::new
+                ));
     }
     
     // UI Helper Methods
