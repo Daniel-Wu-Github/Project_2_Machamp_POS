@@ -258,8 +258,10 @@ public class MainController implements Initializable {
 
         setupSelectionHandlers();
         setupContinueHandler();
+        
+        // Populate default drinks for the menu
+        populateDefaultDrinks();
     }
-    
     /**
      * Handle the Add Product button click
      */
