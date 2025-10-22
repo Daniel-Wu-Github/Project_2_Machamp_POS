@@ -8,7 +8,18 @@ import java.util.List;
  * Handles database connections, table creation
  */
 public class DatabaseManager {
-    private static final String DATABASE_URL = "jdbc:sqlite:machamp_pos.db";
+    /**
+     * Default database URL (keeps the existing SQLite local DB as the default).
+     * Can be overridden by setting the system property `db.url` (-Ddb.url=...) or
+     * environment variable `DB_URL`.
+     */
+    private static String DATABASE_URL = "jdbc:sqlite:machamp_pos.db";
+
+    // Default DB user (kept as a default for remote DBs). Password is left null
+    // and will be requested from the terminal at runtime (or read from env/property).
+    private static String DB_USER = "gang_12";
+    private static String DB_PASS = null;
+
     private Connection connection;
 
     
@@ -45,7 +56,37 @@ public class DatabaseManager {
      * Initialize database connection
      */
     private void initializeDatabase() throws SQLException {
-        connection = DriverManager.getConnection(DATABASE_URL);
+        // If the URL looks like a server-based JDBC (not the local sqlite file),
+        // attempt to obtain credentials. For the default sqlite file no auth is needed.
+        if (DB_PASS == null && !DATABASE_URL.startsWith("jdbc:sqlite:")) {
+            // Try Console first (secure, no-echo)
+            java.io.Console console = System.console();
+            if (console != null) {
+                char[] passChars = console.readPassword("Enter DB password for user %s: ", DB_USER);
+                if (passChars != null) DB_PASS = new String(passChars);
+            }
+            // Fallback to environment variable
+            if (DB_PASS == null) {
+                String env = System.getenv("DB_PASS");
+                if (env != null && !env.isBlank()) DB_PASS = env;
+            }
+            // Last-resort fallback to visible input (useful in some IDEs)
+            if (DB_PASS == null) {
+                System.out.print("Enter DB password for user " + DB_USER + ": ");
+                java.util.Scanner scanner = new java.util.Scanner(System.in);
+                DB_PASS = scanner.nextLine();
+            }
+        }
+
+        if (DB_PASS != null && !DB_PASS.isEmpty() && !DATABASE_URL.startsWith("jdbc:sqlite:")) {
+            // Use properties to supply user/password for JDBC drivers that accept them
+            java.util.Properties props = new java.util.Properties();
+            props.setProperty("user", DB_USER);
+            props.setProperty("password", DB_PASS);
+            connection = DriverManager.getConnection(DATABASE_URL, props);
+        } else {
+            connection = DriverManager.getConnection(DATABASE_URL);
+        }
         // Enforce foreign keys for future relational tables
         try (Statement fk = connection.createStatement()) {
             fk.execute("PRAGMA foreign_keys = ON");
