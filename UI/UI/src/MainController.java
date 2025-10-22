@@ -258,6 +258,7 @@ public class MainController implements Initializable {
 
         setupSelectionHandlers();
         setupContinueHandler();
+<<<<<<< HEAD
 
     // Populate default drinks so manager/test list appears on Orders page
     populateDefaultDrinks();
@@ -272,8 +273,12 @@ public class MainController implements Initializable {
             series.getData().add(new XYChart.Data<>("20:00", 90000));
             salesLineChart.getData().add(series);
         }
+=======
+        
+        // Populate default drinks for the menu
+        populateDefaultDrinks();
+>>>>>>> f7d702f236f42c2baed7402bd2c0fdc23e17a90a
     }
-    
     /**
      * Handle the Add Product button click
      */
