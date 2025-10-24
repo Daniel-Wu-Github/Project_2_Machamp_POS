@@ -14,10 +14,19 @@ import java.time.LocalDate;
 /**
  * Main Application class for the Machamp POS System
  * This class extends JavaFX Application and serves as the entry point
+ * for the point-of-sale system user interface.
+ * 
+ * @author Juan Elias
  */
 public class App extends Application {
     private Stage primaryStage;
 
+    /**
+     * Starts the JavaFX application and initializes the primary stage.
+     * Loads the main FXML view and sets up the initial scene.
+     * 
+     * @param stage the primary stage for this application
+     */
     @Override
     public void start(Stage stage) {
         this.primaryStage = stage;
@@ -33,6 +42,12 @@ public class App extends Application {
         }
     }
 
+    /**
+     * Main entry point for the application.
+     * Initializes the database manager and launches the JavaFX application.
+     * 
+     * @param args command line arguments passed to the application
+     */
     public static void main(String[] args) {
         // Initialize database manager BEFORE launching UI so test output appears immediately
         DatabaseManager dbManager = new DatabaseManager(true); // true => reset for clean test

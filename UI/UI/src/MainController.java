@@ -40,8 +40,12 @@ import java.util.LinkedHashMap;
 import java.sql.SQLException;
 
 /**
- * Controller class for the Main View of the Machamp POS System
- * This class handles all the UI interactions and business logic
+ * Controller class for the Main View of the Machamp POS System.
+ * This class handles all the UI interactions and business logic for the point-of-sale
+ * application, including order management, inventory control, employee management,
+ * and report generation.
+ * 
+ * @author Daniel Wu
  */
 public class MainController implements Initializable {
 
@@ -177,7 +181,12 @@ public class MainController implements Initializable {
         }
     }
 
-    // Show a modal DatePicker in a popup dialog and return the chosen date, or null if canceled
+    /**
+     * Shows a modal DatePicker dialog for date selection.
+     * 
+     * @param defaultDate the default date to display in the picker
+     * @return the selected date, or null if the user cancels
+     */
     private java.time.LocalDate showDatePickerPopup(java.time.LocalDate defaultDate) {
         Dialog<java.time.LocalDate> dialog = new Dialog<>();
         dialog.setTitle("Select Date for X Report");
@@ -197,7 +206,11 @@ public class MainController implements Initializable {
     }
     
     /**
-     * Initialize method called when the FXML is loaded
+     * Initialize method called when the FXML is loaded.
+     * Sets up all UI components, event handlers, and loads initial data.
+     * 
+     * @param location the location used to resolve relative paths for the root object
+     * @param resources the resources used to localize the root object
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -292,8 +305,10 @@ public class MainController implements Initializable {
         // Populate default drinks for the menu
         populateDefaultDrinks();
     }
+    
     /**
-     * Handle the Add Product button click
+     * 
+     * @param event the action event triggered by clicking the button
      */
     @FXML
     private void handleAddProduct(ActionEvent event) {
@@ -331,7 +346,8 @@ public class MainController implements Initializable {
     }
     
     /**
-     * Handle the Clear button click
+     * 
+     * @param event the action event triggered by clicking the button
      */
     @FXML
     private void handleClear(ActionEvent event) {
@@ -339,21 +355,12 @@ public class MainController implements Initializable {
         updateStatus("Fields cleared", "info");
     }
     
-    /**
-     * Clear all input fields
-     */
     private void clearFields() {
         productNameField.clear();
         priceField.clear();
         productNameField.requestFocus();
     }
-    
 
-
-    
-    /**
-     * Set up field validation and formatting
-     */
     private void setupValidation() {
         if (priceField != null) {
             priceField.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -365,13 +372,19 @@ public class MainController implements Initializable {
     }
     
     /**
-     * Add product to the system (placeholder for database integration)
+     * 
+     * @param name the name of the product
+     * @param price the price of the product
      */
     private void addProduct(String name, double price) {
         System.out.println("Adding product: " + name + " with price: $" + String.format("%.2f", price));
     }
 
     // ---------- New Navigation Logic ----------
+    /**
+     * 
+     * @param pane the pane to display
+     */
     private void showPane(BorderPane pane) {
         for (Node child : rootStack.getChildren()) {
             if (child instanceof BorderPane bp) {
@@ -393,6 +406,7 @@ public class MainController implements Initializable {
         resetSelections();
         showPane(customizationPane);
     }
+
 
     public void showManagerPortal() {
         showPane(managerPane);
@@ -428,6 +442,12 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @param itemNumber the item number in the order
+     * @param itemDetails the details string for the item
+     * @return a VBox containing the formatted order item card
+     */
     private VBox createOrderItemCard(int itemNumber, String itemDetails) {
         VBox card = new VBox(5);
         card.setStyle("-fx-background-color: #f5f5f5; -fx-padding: 10; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
@@ -478,6 +498,10 @@ public class MainController implements Initializable {
         }
     }
 
+    /**
+     * 
+     * @param category the category to filter by
+     */
     private void filterCategory(String category) {
         // Placeholder: implement filtering logic when categories beyond Drinks are added
         System.out.println("Category selected: " + category);
@@ -819,6 +843,10 @@ public class MainController implements Initializable {
     }
     
     // Submit implementations
+    /*
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitAddMenuItem() throws Exception {
         String name = field1.getText().trim();
         String priceText = field2.getText().trim();
@@ -849,8 +877,11 @@ public class MainController implements Initializable {
     }
 
     /**
-     * Create a visual tile for a drink and add it to the drinksGrid FlowPane.
-     * The tile will be clickable and will open the customization page for that drink.
+     * 
+     * @param name the name of the drink
+     * @param price the price of the drink
+     * @param id the database ID of the drink
+     * @param ingredients the ingredients string for the drink
      */
     private void addDrinkTile(String name, double price, int id, String ingredients) {
         if (drinksGrid == null) return;
@@ -921,9 +952,6 @@ public class MainController implements Initializable {
         drinksGrid.getChildren().add(tile);
     }
 
-    /**
-     * Populate a curated list of default drinks into the drinksGrid.
-     */
     private void populateDefaultDrinks() {
         String[][] defaults = new String[][] {
             {"Original Milk Tea", "5.25", "{Water, Milk, Sugar, Tea}"},
@@ -958,7 +986,11 @@ public class MainController implements Initializable {
         }
     }
 
-    /** Create a filesystem/classpath-safe filename from a display name */
+    /**
+     * 
+     * @param name the display name to convert
+     * @return a slugified version of the name suitable for filenames
+     */
     private String slugify(String name) {
         if (name == null) return "";
         String s = name.toLowerCase();
@@ -967,6 +999,10 @@ public class MainController implements Initializable {
         return s;
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitUpdateMenuItem() throws Exception {
         String idText = idField.getText().trim();
         String name = field1.getText().trim();
@@ -998,6 +1034,10 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitAddIngredient() throws Exception {
         String name = field1.getText().trim();
         String costText = field2.getText().trim();
@@ -1020,6 +1060,10 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitUpdateInventory() throws Exception {
         String idText = idField.getText().trim();
         String costText = field1.getText().trim();
@@ -1057,6 +1101,10 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitAddEmployee() throws Exception {
         String firstName = field1.getText().trim();
         String lastName = field2.getText().trim();
@@ -1082,6 +1130,10 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or input validation fails
+     */
     private void submitUpdateEmployee() throws Exception {
         String idText = idField.getText().trim();
         String firstName = field1.getText().trim();
@@ -1117,6 +1169,10 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or date validation fails
+     */
     private void submitGenerateReport() throws Exception {
         java.time.LocalDate startDate = startDatePicker.getValue();
         java.time.LocalDate endDate = endDatePicker.getValue();
@@ -1143,6 +1199,10 @@ public class MainController implements Initializable {
         updateStatus("Sales report generated successfully for " + startDate + " to " + endDate, "success");
     }
     
+    /**
+     * 
+     * @throws Exception if database operation fails or date validation fails
+     */
     private void submitGenerateInventoryReport() throws Exception {
         java.time.LocalDate startDate = startDatePicker.getValue();
         java.time.LocalDate endDate = endDatePicker.getValue();
@@ -1209,8 +1269,11 @@ public class MainController implements Initializable {
     }
     
     /**
-     * Helper method to get ingredient usage data from the database
-     * Returns a map of ingredient names to quantities used, sorted by usage (descending)
+     * 
+     * @param startDate the start date of the reporting period
+     * @param endDate the end date of the reporting period
+     * @return a map of ingredient names to usage quantities
+     * @throws SQLException if database query fails
      */
     private Map<String, Integer> getIngredientUsageData(java.time.LocalDate startDate, java.time.LocalDate endDate) throws SQLException {
         java.time.format.DateTimeFormatter DATE_ONLY = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -1321,6 +1384,10 @@ public class MainController implements Initializable {
     }
     
     // UI Helper Methods
+    /**
+     * 
+     * @param title the title to display in the management section
+     */
     private void showManagementSection(String title) {
         if (managementSection != null) {
             managementSection.setVisible(true);
@@ -1383,6 +1450,11 @@ public class MainController implements Initializable {
         }
     }
     
+    /**
+     * 
+     * @param message the status message to display
+     * @param type the type of message ("error", "success", "info", or other)
+     */
     private void updateStatus(String message, String type) {
         if (statusLabel == null) return;
         statusLabel.setText(message);
@@ -1422,21 +1494,38 @@ public class MainController implements Initializable {
         });
     }
 
+    /**
+     * 
+     * @return the formatted order string
+     */
     private String buildOrderString() {
         String toppingsPart = selectedToppings.isEmpty() ? "No Toppings" : selectedToppings.stream().collect(Collectors.joining(", "));
         return String.format("%s | Size: %s | Sugar: %s | Toppings: %s", selectedDrinkName, selectedSize, selectedSugar, toppingsPart);
     }
 
+    /**
+     * 
+     * @param size the size to select ("Small", "Medium", or "Large")
+     */
     private void selectSize(String size) {
         selectedSize = size;
         highlightSizeButtons();
     }
 
+    /**
+     * 
+     * @param sugar the sugar level to select ("No Sugar", "Half Sugar", or "Normal")
+     */
     private void selectSugar(String sugar) {
         selectedSugar = sugar;
         highlightSugarButtons();
     }
 
+    /**
+     * 
+     * @param topping the name of the topping to toggle
+     * @param btn the button associated with this topping
+     */
     private void toggleTopping(String topping, Button btn) {
         if (selectedToppings.contains(topping)) {
             selectedToppings.remove(topping);

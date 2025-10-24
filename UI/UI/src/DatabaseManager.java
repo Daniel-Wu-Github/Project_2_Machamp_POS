@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Database Manager for Machamp POS System using SQLite
- * Handles database connections, table creation
+ * Database Manager for Machamp POS System using SQLite.
+ * Handles database connections, table creation, and CRUD operations
+ * for drinks, ingredients, employees, customers, and order history.
+ * 
+ * @author Juan Elias
  */
 public class DatabaseManager {
     private static final String DATABASE_URL = "jdbc:sqlite:machamp_pos.db";
@@ -13,14 +16,19 @@ public class DatabaseManager {
 
     
     /**
-     * Constructor - initializes database connection and creates tables
+     * Default constructor - initializes database connection and creates tables.
+     * Does not reset existing data.
      */
     public DatabaseManager() {
         this(false);
     }
 
     /**
-     * @param reset If true, existing tables are dropped and recreated fresh each startup.
+     * Constructor with optional reset functionality.
+     * Initializes database connection, optionally drops and recreates tables,
+     * and loads sample data.
+     * 
+     * @param reset if true, existing tables are dropped and recreated fresh each startup
      */
     public DatabaseManager(boolean reset) {
         try {
@@ -42,7 +50,9 @@ public class DatabaseManager {
     }
 
     /**
-     * Initialize database connection
+     * Initializes the database connection and enables foreign key constraints.
+     * 
+     * @throws SQLException if connection to database fails
      */
     private void initializeDatabase() throws SQLException {
         connection = DriverManager.getConnection(DATABASE_URL);
@@ -54,7 +64,10 @@ public class DatabaseManager {
     }
 
     /**
-     * Create necessary tables for the POS system
+     * Creates necessary tables for the POS system if they don't already exist.
+     * Tables created: drinks, orderhistory, ingredients, customers, employees.
+     * 
+     * @throws SQLException if table creation fails
      */
     private void createTables() throws SQLException {
         String[] createTableQueries = {
@@ -127,7 +140,11 @@ public class DatabaseManager {
         System.out.println("Database tables created successfully!");
     }
 
-    // -------- Order History Import --------
+    /**
+     * Imports order history from CSV if the orderhistory table is empty.
+     * 
+     * @param csvPath the path to the CSV file containing order history
+     */
     private void importOrderHistoryIfEmpty(String csvPath) {
         try {
             if (!isTableEmpty("orderhistory")) return;
@@ -146,7 +163,10 @@ public class DatabaseManager {
      * Imports orders from a CSV file with headers:
      * DateTime,Order ID,Customer ID,Menu Items,Total Price
      * Menu Items column contains a Python dict-like string: {'Drink': (a,b,c), ...}
-     * We normalize it to a JSON-like string: {"Drink": [a,b,c], ...}
+     * which is normalized to a JSON-like string: {"Drink": [a,b,c], ...}
+     * 
+     * @param path the file path to the CSV file
+     * @throws Exception if the file cannot be read or import fails
      */
     public void importOrderHistoryFromCSV(String path) throws Exception {
         java.nio.file.Path p = java.nio.file.Paths.get(path);
@@ -186,14 +206,20 @@ public class DatabaseManager {
     }
 
     /**
-     * Internal helper to hold parsed order line.
+     * Internal helper class to hold parsed order line data.
+     * 
+     * @author Ayad Masud
      */
     private static class ParsedOrder {
         String dateTime; String orderId; String customerId; String menuItemsJson; String totalPrice;
     }
 
     /**
-     * Parses a single CSV line. Avoids heavy CSV libs; relies on fixed column count and quoting on menu_items.
+     * Parses a single CSV line from the order history file.
+     * Avoids heavy CSV libraries; relies on fixed column count and quoting on menu_items.
+     * 
+     * @param line the CSV line to parse
+     * @return ParsedOrder object containing the parsed data, or null if parsing fails
      */
     private ParsedOrder parseOrderLine(String line) {
         try {
@@ -231,7 +257,9 @@ public class DatabaseManager {
     }
 
     /**
-     * Drops all known tables (order chosen to avoid FK issues if added later).
+     * Drops all known tables in the proper order to avoid foreign key issues.
+     * 
+     * @throws SQLException if table dropping fails
      */
     private void dropAllTables() throws SQLException {
         String[] tables = {"employees", "drinks", "ingredients", "customers"};
@@ -243,7 +271,11 @@ public class DatabaseManager {
         System.out.println("All tables dropped (reset mode).");
     }
 
-    // ---------- Employee helpers ----------
+    /**
+     * Inserts sample employee data if the employees table is empty.
+     * 
+     * @throws SQLException if insertion fails
+     */
     private void insertSampleEmployees() throws SQLException {
         if (isTableEmpty("employees")) {
             String sql = """
@@ -258,6 +290,13 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Checks if a table is empty (has no rows).
+     * 
+     * @param table the name of the table to check
+     * @return true if the table has no rows, false otherwise
+     * @throws SQLException if the query fails
+     */
     private boolean isTableEmpty(String table) throws SQLException {
         String q = "SELECT COUNT(*) FROM " + table;
         try (Statement st = connection.createStatement(); ResultSet rs = st.executeQuery(q)) {
@@ -265,6 +304,16 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Adds a new employee to the database.
+     * 
+     * @param firstName the employee's first name
+     * @param lastName the employee's last name
+     * @param email the employee's email address (must be unique)
+     * @param role the employee's role (CASHIER or MANAGER)
+     * @return the generated employee ID, or -1 if insertion fails
+     * @throws SQLException if insertion fails
+     */
     public int addEmployee(String firstName, String lastName, String email, String role) throws SQLException {
         String sql = "INSERT INTO employees (first_name,last_name,email,role,active) VALUES (?,?,?,?,1)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -280,6 +329,12 @@ public class DatabaseManager {
         return -1;
     }
 
+    /**
+     * Lists all employees in the database with their details.
+     * 
+     * @return a list of formatted strings containing employee information
+     * @throws SQLException if the query fails
+     */
     public List<String> listEmployees() throws SQLException {
         List<String> list = new ArrayList<>();
         String sql = "SELECT id, first_name, last_name, email, role, active FROM employees ORDER BY id";
@@ -293,6 +348,14 @@ public class DatabaseManager {
         return list;
     }
 
+    /**
+     * Updates an employee's role.
+     * 
+     * @param id the employee ID
+     * @param newRole the new role (CASHIER or MANAGER)
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean updateEmployeeRole(int id, String newRole) throws SQLException {
         String sql = "UPDATE employees SET role=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -302,6 +365,14 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Sets an employee's active status.
+     * 
+     * @param id the employee ID
+     * @param active true to set as active, false to set as inactive
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean setEmployeeActive(int id, boolean active) throws SQLException {
         String sql = "UPDATE employees SET active=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -311,7 +382,13 @@ public class DatabaseManager {
         }
     }
 
-    /** Retrieve a single employee record */
+    /**
+     * Retrieves a single employee record by ID.
+     * 
+     * @param id the employee ID
+     * @return formatted string containing employee information, or null if not found
+     * @throws SQLException if the query fails
+     */
     public String getEmployee(int id) throws SQLException {
         String sql = "SELECT id, first_name, last_name, email, role, active FROM employees WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -326,7 +403,19 @@ public class DatabaseManager {
         return null;
     }
 
-    /** Update employee basic fields (except id & created_at). Null parameters keep existing values. */
+    /**
+     * Updates employee basic fields (except id and created_at).
+     * Null parameters keep existing values unchanged.
+     * 
+     * @param id the employee ID
+     * @param firstName the new first name, or null to keep current value
+     * @param lastName the new last name, or null to keep current value
+     * @param email the new email, or null to keep current value
+     * @param role the new role, or null to keep current value
+     * @param active the new active status, or null to keep current value
+     * @return true if exactly one row was updated, false if no changes were made
+     * @throws SQLException if the update fails
+     */
     public boolean updateEmployee(int id, String firstName, String lastName, String email, String role, Boolean active) throws SQLException {
         // Build dynamic update based on provided non-null values
         StringBuilder sb = new StringBuilder("UPDATE employees SET ");
@@ -346,7 +435,12 @@ public class DatabaseManager {
         }
     }
 
-    /** List only active employees */
+    /**
+     * Lists only active employees.
+     * 
+     * @return a list of formatted strings containing active employee information
+     * @throws SQLException if the query fails
+     */
     public List<String> listActiveEmployees() throws SQLException {
         List<String> list = new ArrayList<>();
         String sql = "SELECT id, first_name, last_name, email, role FROM employees WHERE active=1 ORDER BY id";
@@ -384,7 +478,9 @@ public class DatabaseManager {
     // }
     
     /**
-     * Insert sample ingredients
+     * Inserts sample ingredients into the database if the ingredients table is empty.
+     * 
+     * @throws SQLException if insertion fails
      */
     private void insertSampleIngredients() throws SQLException {
         if (!isTableEmpty("ingredients")) return;
@@ -418,7 +514,9 @@ public class DatabaseManager {
     }
     
     /**
-     * Insert sample drinks with ingredients
+     * Inserts sample drinks with ingredients into the database if the drinks table is empty.
+     * 
+     * @throws SQLException if insertion fails
      */
     private void insertSampleDrinks() throws SQLException {
         if (!isTableEmpty("drinks")) return;
@@ -449,7 +547,12 @@ public class DatabaseManager {
         
     }
 
-    // Optional: recreate only the employees table if schema adjustments are needed without full reset
+    /**
+     * Recreates only the employees table if schema adjustments are needed without full reset.
+     * Drops and recreates the employees table with the current schema.
+     * 
+     * @throws SQLException if table recreation fails
+     */
     public void recreateEmployeesTable() throws SQLException {
         try (Statement st = connection.createStatement()) {
             st.executeUpdate("DROP TABLE IF EXISTS employees");
@@ -491,14 +594,21 @@ public class DatabaseManager {
     }
 
     /**
-     * Get a single connection for advanced operations
+     * Gets the database connection for advanced operations.
+     * 
+     * @return the active database connection
      */
     public Connection getConnection() {
         return connection;
     }
 
     // ================== DRINK (MENU) MANAGEMENT ==================
-    /** Returns list of drinks with id, name, price */
+    /**
+     * Returns a list of drinks with id, name, and price.
+     * 
+     * @return a list of formatted strings containing drink information
+     * @throws SQLException if the query fails
+     */
     public List<String> listDrinks() throws SQLException {
         List<String> drinks = new ArrayList<>();
         String sql = "SELECT id, name, base_price FROM drinks ORDER BY id";
@@ -510,7 +620,16 @@ public class DatabaseManager {
         return drinks;
     }
 
-    /** Inserts a new drink (ingredients and customization columns optional) */
+    /**
+     * Inserts a new drink into the database.
+     * Ingredients and customization columns are optional.
+     * 
+     * @param name the drink name (must be unique)
+     * @param basePrice the base price of the drink
+     * @param ingredients the ingredients list (e.g., "{Water, Milk, Sugar, Tea}")
+     * @return the generated drink ID, or -1 if insertion fails
+     * @throws SQLException if insertion fails
+     */
     public int addDrink(String name, double basePrice, String ingredients) throws SQLException {
         String sql = "INSERT INTO drinks (name, base_price, ingredients) VALUES (?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -523,7 +642,14 @@ public class DatabaseManager {
         return -1;
     }
 
-    /** Update only base price for a drink */
+    /**
+     * Updates only the base price for a drink.
+     * 
+     * @param drinkId the drink ID
+     * @param newPrice the new base price
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean updateDrinkPrice(int drinkId, double newPrice) throws SQLException {
         String sql = "UPDATE drinks SET base_price=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -533,7 +659,15 @@ public class DatabaseManager {
         }
     }
 
-    /** Generic update of name and ingredients by id */
+    /**
+     * Generic update of name and ingredients by drink ID.
+     * 
+     * @param drinkId the drink ID
+     * @param newName the new drink name
+     * @param newIngredients the new ingredients list
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean updateDrink(int drinkId, String newName, String newIngredients) throws SQLException {
         String sql = "UPDATE drinks SET name=?, ingredients=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -544,7 +678,13 @@ public class DatabaseManager {
         }
     }
 
-    /** Delete drink (hard delete) */
+    /**
+     * Deletes a drink from the database (hard delete).
+     * 
+     * @param drinkId the drink ID to delete
+     * @return true if exactly one row was deleted, false otherwise
+     * @throws SQLException if the deletion fails
+     */
     public boolean deleteDrink(int drinkId) throws SQLException {
         String sql = "DELETE FROM drinks WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -554,7 +694,12 @@ public class DatabaseManager {
     }
 
     // ================== INGREDIENT (INVENTORY) MANAGEMENT ==================
-    /** List ingredients id | name | cost | quantity */
+    /**
+     * Lists all ingredients with id, name, cost, and quantity.
+     * 
+     * @return a list of formatted strings containing ingredient information
+     * @throws SQLException if the query fails
+     */
     public List<String> listIngredients() throws SQLException {
         List<String> list = new ArrayList<>();
         String sql = "SELECT id,name,cost,quantity FROM ingredients ORDER BY id";
@@ -567,7 +712,15 @@ public class DatabaseManager {
         return list;
     }
 
-    /** Add a new ingredient */
+    /**
+     * Adds a new ingredient to the database.
+     * 
+     * @param name the ingredient name (must be unique)
+     * @param cost the cost per unit of the ingredient
+     * @param quantity the initial quantity in stock
+     * @return the generated ingredient ID, or -1 if insertion fails
+     * @throws SQLException if insertion fails
+     */
     public int addIngredient(String name, double cost, double quantity) throws SQLException {
         String sql = "INSERT INTO ingredients (name,cost,quantity) VALUES (?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -580,7 +733,14 @@ public class DatabaseManager {
         return -1;
     }
 
-    /** Set absolute quantity */
+    /**
+     * Sets the absolute quantity for an ingredient.
+     * 
+     * @param ingredientId the ingredient ID
+     * @param newQuantity the new absolute quantity
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean updateIngredientQuantity(int ingredientId, double newQuantity) throws SQLException {
         String sql = "UPDATE ingredients SET quantity=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -590,7 +750,14 @@ public class DatabaseManager {
         }
     }
 
-    /** Increment/decrement quantity by delta (can be negative) */
+    /**
+     * Increments or decrements ingredient quantity by a delta value.
+     * 
+     * @param ingredientId the ingredient ID
+     * @param delta the amount to add (positive) or subtract (negative)
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean adjustIngredientQuantity(int ingredientId, double delta) throws SQLException {
         String sql = "UPDATE ingredients SET quantity = quantity + ? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -600,7 +767,14 @@ public class DatabaseManager {
         }
     }
 
-    /** Update ingredient cost */
+    /**
+     * Updates the cost of an ingredient.
+     * 
+     * @param ingredientId the ingredient ID
+     * @param newCost the new cost per unit
+     * @return true if exactly one row was updated, false otherwise
+     * @throws SQLException if the update fails
+     */
     public boolean updateIngredientCost(int ingredientId, double newCost) throws SQLException {
         String sql = "UPDATE ingredients SET cost=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -610,7 +784,13 @@ public class DatabaseManager {
         }
     }
 
-    /** Delete ingredient */
+    /**
+     * Deletes an ingredient from the database.
+     * 
+     * @param ingredientId the ingredient ID to delete
+     * @return true if exactly one row was deleted, false otherwise
+     * @throws SQLException if the deletion fails
+     */
     public boolean deleteIngredient(int ingredientId) throws SQLException {
         String sql = "DELETE FROM ingredients WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
