@@ -1,5 +1,5 @@
 /**
- * Enumeration of employee roles within the POS system.
+ * @author Daniel Wu
  */
 public enum EmployeeRole {
     CASHIER,

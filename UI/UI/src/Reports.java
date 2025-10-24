@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
  *      month = substr(order_datetime,1,2)
  *      day = substr(order_datetime,3,2)
  *    Then we compare (year||month||day) BETWEEN ? AND ? where parameters are yyyyMMdd.
+ * 
+ * @author Daniel Wu
  */
 public class Reports {
     private LocalDate startDate; // inclusive
@@ -33,23 +35,48 @@ public class Reports {
         this.endDate = today;
     }
 
+    /**
+     * 
+     * @param start the start date for the report range (inclusive)
+     * @param end the end date for the report range (inclusive)
+     * @throws IllegalArgumentException if end date is before start date
+     */
     public Reports(LocalDate start, LocalDate end) {
         if (end.isBefore(start)) throw new IllegalArgumentException("End date cannot be before start date");
         this.startDate = start;
         this.endDate = end;
     }
 
+    /**
+     * 
+     * @param start the new start date (inclusive)
+     * @throws IllegalArgumentException if start date is after the current end date
+     */
     public void setStartDate(LocalDate start) {
         if (endDate != null && endDate.isBefore(start)) throw new IllegalArgumentException("Start after current end date");
         this.startDate = start;
     }
 
+    /**
+     * 
+     * @param end the new end date (inclusive)
+     * @throws IllegalArgumentException if end date is before the current start date
+     */
     public void setEndDate(LocalDate end) {
         if (startDate != null && end.isBefore(startDate)) throw new IllegalArgumentException("End before current start date");
         this.endDate = end;
     }
 
+    /**
+     * 
+     * @return the start date (inclusive)
+     */
     public LocalDate getStartDate() { return startDate; }
+    
+    /**
+     * 
+     * @return the end date (inclusive)
+     */
     public LocalDate getEndDate() { return endDate; }
 
     /**
@@ -59,6 +86,10 @@ public class Reports {
      * The parsing logic expects menu_items stored as a JSON-like map: {"Drink": [a,b,c], ...}
      * We count each key once per occurrence (any quantity encoded inside the tuple/list is ignored for now
      * because the provided structure (a,b,c) meaning wasn't specified). You can adapt to interpret these numbers later.
+     * 
+     * @param db the DatabaseManager instance to access the order history
+     * @return a formatted string containing the sales summary with totals and item counts
+     * @throws SQLException if a database access error occurs
      */
     public String generateSalesSummary(DatabaseManager db) throws SQLException {
         String startStr = startDate.format(DATE_ONLY);

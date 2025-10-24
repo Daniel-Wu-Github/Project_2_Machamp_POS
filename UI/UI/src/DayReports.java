@@ -27,6 +27,8 @@ import java.util.TreeMap;
  * NOTE: CSV currently only includes sales; returns/voids/discards/payment method
  * are not tracked. This X Report focuses on hourly sales, transaction counts,
  * average sale per transaction, and marks rush hours.
+ * 
+ * @author Ayad Masud
  */
 public class DayReports {
 
@@ -34,12 +36,26 @@ public class DayReports {
 	private static final int STORE_OPEN_HOUR = 9;  // 09:00
 	private static final int STORE_CLOSE_HOUR = 21; // 21:00 (exclusive)
 
+	/**
+	 * Encapsulates the results of an X Report generation.
+	 * Contains the date, hourly breakdown of sales metrics, and totals.
+	 * 
+	 * @author Daniel Wu
+	 */
 	public static class XReportResult {
 		public final LocalDate date;
 		public final Map<Integer, HourBucket> hourly; // hour -> metrics
 		public final double totalSales;
 		public final int txnCount;
 
+		/**
+		 * Constructs an XReportResult with the specified parameters.
+		 * 
+		 * @param date the date of the report
+		 * @param hourly map of hour (0-23) to HourBucket containing sales metrics
+		 * @param totalSales the total sales amount for the day
+		 * @param txnCount the total number of transactions for the day
+		 */
 		XReportResult(LocalDate date, Map<Integer, HourBucket> hourly, double totalSales, int txnCount) {
 			this.date = date;
 			this.hourly = hourly;
@@ -47,6 +63,12 @@ public class DayReports {
 			this.txnCount = txnCount;
 		}
 
+		/**
+		 * Generates a formatted string representation of the X Report.
+		 * Includes summary statistics and hourly breakdown with rush hour indicators.
+		 * 
+		 * @return formatted X Report as a string
+		 */
 		@Override
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
@@ -101,6 +123,12 @@ public class DayReports {
 		}
 	}
 
+	/**
+	 * Holds sales metrics for a single hour.
+	 * Tracks total sales amount and number of transactions.
+	 * 
+	 * @author Sarang Cheler
+	 */
 	public static class HourBucket {
 		double sales = 0.0;
 		int transactions = 0;
@@ -109,9 +137,13 @@ public class DayReports {
 	private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("MMddyyyyHHmm");
 
 	/**
-	 * Generate X report for the given date using the orders.csv file.
-	 * @param baseDir a directory to search for the CSV (tries typical locations if null or empty).
+	 * Generates an X report for the given date using the orders.csv file.
+	 * The report includes hourly sales breakdown, transaction counts, and rush hour identification.
+	 * 
+	 * @param baseDir a directory to search for the CSV (tries typical locations if null or empty)
 	 * @param date LocalDate to report on (use LocalDate.now() for today)
+	 * @return XReportResult containing the complete report data
+	 * @throws IOException if orders.csv cannot be found or read
 	 */
 	public XReportResult generateXReport(String baseDir, LocalDate date) throws IOException {
 		Path csvPath = resolveOrdersCsv(baseDir);
@@ -161,7 +193,16 @@ public class DayReports {
 		return new XReportResult(date, buckets, totalSales, totalTxns);
 	}
     
-    //z report
+	/**
+	 * Generates a Z report (end of day report) for the given date.
+	 * This is based on the X report but marks the end of the business day.
+	 * The report is saved to the reports/ directory.
+	 * 
+	 * @param baseDir a directory to search for the CSV (tries typical locations if null or empty)
+	 * @param date LocalDate to report on
+	 * @return formatted Z Report string with file save confirmation
+	 * @throws IOException if orders.csv cannot be found or read, or if report file cannot be written
+	 */
     public String generateZReport(String baseDir, LocalDate date) throws IOException {
         XReportResult result = generateXReport(baseDir, date);
         String zText = result.toString().replace("X Report", "Z Report (End of Day)");
@@ -184,7 +225,13 @@ public class DayReports {
         return zText + "\n\n[Z Report saved to: " + zFile.toAbsolutePath() + "]";
     }
 
-	// Attempt to locate orders.csv across likely project paths.
+	/**
+	 * Attempts to locate orders.csv across likely project paths.
+	 * Searches in the provided baseDir and several typical relative locations.
+	 * 
+	 * @param baseDir optional directory hint to search first
+	 * @return Path to orders.csv if found, null otherwise
+	 */
 	private Path resolveOrdersCsv(String baseDir) {
 		List<String> candidates = new ArrayList<>();
 		if (baseDir != null && !baseDir.isEmpty()) {
@@ -204,6 +251,12 @@ public class DayReports {
 		return null;
 	}
 
+	/**
+	 * Parses a date-time string in MMddyyyyHHmm format.
+	 * 
+	 * @param s the date-time string to parse
+	 * @return LocalDateTime object if parsing succeeds, null otherwise
+	 */
 	private LocalDateTime parseDateTime(String s) {
 		try {
 			return LocalDateTime.parse(s, DATE_TIME_FMT);
@@ -212,6 +265,12 @@ public class DayReports {
 		}
 	}
 
+	/**
+	 * Parses a numeric amount string to a double value.
+	 * 
+	 * @param s the amount string to parse
+	 * @return the parsed amount, or 0.0 if parsing fails
+	 */
 	private double parseAmount(String s) {
 		try {
 			return Double.parseDouble(s);
@@ -220,17 +279,37 @@ public class DayReports {
 		}
 	}
 
+	/**
+	 * Formats a double value as a currency string.
+	 * 
+	 * @param v the value to format
+	 * @return formatted currency string (e.g., "$12.34")
+	 */
 	private static String money(double v) {
 		return String.format(Locale.US, "$%.2f", v);
 	}
 
+	/**
+	 * Creates a string consisting of a character repeated a specified number of times.
+	 * 
+	 * @param ch the character to repeat
+	 * @param count the number of times to repeat the character
+	 * @return a string with the character repeated count times
+	 */
 	private static String repeat(char ch, int count) {
 		StringBuilder sb = new StringBuilder(count);
 		for (int i = 0; i < count; i++) sb.append(ch);
 		return sb.toString();
 	}
 
-	// Compute percentile (0.0 - 1.0) for a list of values. Simple nearest-rank approach.
+	/**
+	 * Computes the percentile value for a list of values using a simple nearest-rank approach.
+	 * Uses linear interpolation between values when the rank falls between indices.
+	 * 
+	 * @param values the list of values to compute percentile from
+	 * @param percentile the percentile to compute (0.0 to 1.0, where 0.75 is 75th percentile)
+	 * @return the computed percentile value, or 0.0 if values is null or empty
+	 */
 	private static double computePercentile(List<Double> values, double percentile) {
 		if (values == null || values.isEmpty()) return 0.0;
 		List<Double> copy = new ArrayList<>(values);
@@ -245,7 +324,13 @@ public class DayReports {
 		return copy.get(low) * (1 - weight) + copy.get(high) * weight;
 	}
 
-	// Minimal CSV parser that respects quotes and commas inside quotes
+	/**
+	 * Parses a CSV line respecting quotes and commas inside quoted fields.
+	 * Handles quoted fields that may contain commas as part of the data.
+	 * 
+	 * @param line the CSV line to parse
+	 * @return list of field values extracted from the CSV line
+	 */
 	private List<String> parseCsvLine(String line) {
 		List<String> result = new ArrayList<>();
 		StringBuilder sb = new StringBuilder();

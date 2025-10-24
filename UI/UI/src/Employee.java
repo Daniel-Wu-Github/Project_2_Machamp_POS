@@ -126,7 +126,7 @@ public abstract class Employee {
             "id=" + id +
             ", name='" + getFullName() + '\'' +
             ", email='" + email + '\'' +
-            ", role=" + role +
+            // ", role=" + role +
             ", active=" + active +
             '}';
     }
